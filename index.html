@@ -233,7 +233,7 @@ dialog.help[open] { display: flex; flex-direction: column }
 .help-body kbd { display: inline-block; padding: 3px 6px; border: 1px solid var(--key-line); border-radius: 2px; color: var(--fg) }
 .help-body kbd + kbd { margin-left: 4px }
 .help-foot { flex: none; padding: 14px 28px; border-top: 1px solid var(--line); color: var(--muted) }
-.help-foot a { color: var(--accent) }
+.help-foot a { color: var(--accent); white-space: nowrap }
 /* three columns only on a screen big enough to show the whole guide at once (a 1440p monitor);
    otherwise one column, so nobody has to scroll down one column and back up for the next */
 @media (min-width: 1900px) and (min-height: 1150px) {
@@ -480,7 +480,7 @@ dialog.help[open] { display: flex; flex-direction: column }
       </table>
     </section>
   </div>
-  <div class="help-foot">The full guide, the source and a place to report problems: <a href="https://github.com/SirSnipesalot/scroll-wheel-tester" target="_blank" rel="noopener">github.com/SirSnipesalot/scroll-wheel-tester</a></div>
+  <div class="help-foot">Full guide, source code and bug reports: <a href="https://github.com/SirSnipesalot/scroll-wheel-tester" target="_blank" rel="noopener">github.com/SirSnipesalot/scroll-wheel-tester</a></div>
 </dialog>
 
 <dialog id="csv-dialog" aria-labelledby="csv-title">

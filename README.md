@@ -33,7 +33,7 @@ Put the pointer anywhere on the page and roll. The page itself will not scroll, 
 
 ### 2. Do the eight roll tests
 
-The strip labelled **ROLL TESTS**, just above the chart, is the actual test. It has eight boxes: four ways of rolling the wheel, each done downwards (**DOWN**) and upwards (**UP**).
+The grid labelled **ROLL TESTS**, just above the chart, is the actual test. It has eight boxes: four ways of rolling the wheel across the top, each done downwards (the **DOWN** row) and upwards (the **UP** row).
 
 | Box | What to do | How much |
 | --- | --- | --- |
@@ -115,7 +115,7 @@ If the fault is still there after all that, it is the mouse. Under warranty, sen
 - **Wheel click** counts presses of the wheel button. A "double-fire" is a second press that arrives too soon after the first to be you, which points to a worn button.
 - **Sideways** counts left and right signals, if your wheel tilts.
 - **Event log.** Every signal, newest first.
-- **Span** sets how many seconds of rolling fit across the chart. **Pause** stops recording and gives the wheel back to the page. **Reset** clears the recording. **Full screen** does what it says.
+- **How to use it** opens a short version of this guide on the page. **Span** sets how many seconds of rolling fit across the chart. **Pause** stops recording and gives the wheel back to the page. **Reset** clears the recording. **Full screen** does what it says. **GitHub** brings you back here.
 
 ## Keyboard shortcuts
 
@@ -129,6 +129,7 @@ If the fault is still there after all that, it is the mouse. Under warranty, sen
 | `T` | Start the Notches per turn check |
 | `Enter` | Finish the check that is running |
 | `Esc` | Cancel the check that is running |
+| `?` | Open the on-page guide |
 
 ## Troubleshooting
 
@@ -151,7 +152,7 @@ In Chrome or Edge, use the install button in the address bar. The tester then op
 - **How it tells a fault from your finger.** A healthy wheel only ever sends notches in the direction you are rolling. The tester treats a notch as a certain fault when it flips direction within 60 milliseconds, which is faster than a finger can turn a wheel back.
 - **It only sees what your browser sees.** In a fast flick the browser can merge a stray notch into the real ones, so some faults hide at high speed. That is why the Single and Slow roll tests matter most.
 - **A clean result is not a guarantee.** A fault that shows up once an hour can miss a two-minute test. If the mouse still misbehaves, test again for longer.
-- **It is new.** So far its fault detection has been checked with simulated wheel signals, not a collection of known-faulty mice. If it gets your mouse wrong, please open an issue and paste the copied report.
+- **It has been run on a real faulty wheel.** It was tested on a Razer DeathAdder V3 Pro with a failing scroll wheel. (That wheel got rolled so much during testing that it started behaving again.) It has not been tried on many other mice yet, so if it gets yours wrong, please open an issue and paste the copied report.
 
 ## For developers
 
