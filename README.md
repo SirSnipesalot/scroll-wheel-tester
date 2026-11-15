@@ -1,6 +1,8 @@
 # Scroll Wheel Tester
 
-A browser page that tests a mouse scroll wheel for hardware faults. Nothing to install: open the page, roll the wheel, read the verdict.
+A browser page that tests a mouse scroll wheel for hardware faults. 
+
+Nothing to install: open the page, roll the wheel, read the verdict.
 
 **Open it:** https://sirsnipesalot.github.io/scroll-wheel-tester/
 
