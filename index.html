@@ -24,7 +24,8 @@
 <style>
 /* Layout: a bench instrument. Faceplate header with keys, an annunciator row (verdict lamp,
    one lamp per kind of fault, numeric readouts), the roll tests strip, then the screen (the tape)
-   with the checks, wheel map and event log racked beside it. One look, dark, desktop only. */
+   with the checks, wheel map and event log racked beside it and, at the foot of the rack, a
+   key for the guide and a link to GitHub. One look, dark, desktop only. */
 :root {
   color-scheme: dark;
   --bg: #1a1b1d; --panel: #222326; --well: #141516; --screen: #0b0c0d; --bezel: #121314; --key: #26272a;
@@ -143,8 +144,8 @@ kbd { font: 400 10px/1 var(--font-data); letter-spacing: 0; text-transform: uppe
 .cell[data-state="bad"] .cell-bar b { background: var(--glitch) }
 
 /* ---- the screen, and the rack beside it ---- */
-.work { min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 14px }
-.tape { position: relative; min-height: 300px; background: var(--screen); border-radius: 8px; box-shadow: inset 0 0 0 1px var(--line), inset 0 0 0 5px var(--bezel); overflow: hidden }
+.work { min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 330px; grid-template-rows: minmax(0, 1fr) auto; gap: 14px }
+.tape { grid-column: 1; grid-row: 1 / 3; position: relative; min-height: 300px; background: var(--screen); border-radius: 8px; box-shadow: inset 0 0 0 1px var(--line), inset 0 0 0 5px var(--bezel); overflow: hidden }
 #chart { position: absolute; inset: 0; width: 100%; height: 100%; display: block }
 .legend { position: absolute; top: 17px; left: 54px; margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 4px 22px; font: 400 10px/1 var(--font-data); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); pointer-events: none }
 .legend i { display: inline-block; width: 9px; height: 9px; margin-right: 7px; vertical-align: -1px; background: var(--muted) }
@@ -159,7 +160,7 @@ kbd { font: 400 10px/1 var(--font-data); letter-spacing: 0; text-transform: uppe
 .hint strong { display: block; font: 600 28px/1.1 var(--font-face); letter-spacing: .12em; text-transform: uppercase }
 .hint span { display: block; margin-top: 6px; color: var(--muted) }
 
-.side { min-height: 0; display: flex; flex-direction: column; gap: 14px; overflow: auto }
+.side { grid-column: 2; grid-row: 1; min-height: 0; display: flex; flex-direction: column; gap: 14px; overflow: auto }
 .checks { flex: none; padding: 12px 14px }
 .check-list { margin: 10px 0 0; padding: 0; list-style: none; display: grid; gap: 8px }
 .check-list li { display: flex; align-items: center; justify-content: space-between; gap: 10px }
@@ -187,7 +188,8 @@ kbd { font: 400 10px/1 var(--font-data); letter-spacing: 0; text-transform: uppe
 .dot { display: inline-block; width: 9px; height: 9px; margin-right: 8px; border-radius: 50%; border: 1px solid var(--muted) }
 .dot.on { background: var(--accent); border-color: var(--accent) }
 
-.log { flex: 1 1 auto; min-height: 150px; display: flex; flex-direction: column; overflow: hidden }
+/* in a short window the log gives way first, down to its heading and the two copy keys */
+.log { flex: 1 1 auto; min-height: 60px; display: flex; flex-direction: column; overflow: hidden }
 .log-head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 8px 8px 14px; border-bottom: 1px solid var(--line) }
 .log-head small { display: block; margin-top: 4px; min-height: 12px; font: 400 10px/1.2 var(--font-data); letter-spacing: 0; color: var(--muted) }
 .log-tools { display: flex; gap: 6px }
@@ -202,7 +204,12 @@ kbd { font: 400 10px/1 var(--font-data); letter-spacing: 0; text-transform: uppe
 .log tr.bad td { background: var(--glitch-soft) }
 .log-empty { margin: 0; padding: 10px 14px; color: var(--muted) }
 
-a.btn { text-decoration: none }
+/* the foot of the rack: a key for the guide and a quiet link back to the project on GitHub.
+   It sits outside the rack's own scrolling, so both stay in view in a short window. */
+.rack-foot { grid-column: 2; grid-row: 2; display: flex; align-items: center; justify-content: space-between; gap: 12px }
+.rack-link { align-self: stretch; display: inline-flex; align-items: center; gap: 8px; padding: 0 2px; font: 500 13px/1 var(--font-face); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); text-decoration: none; white-space: nowrap }
+.rack-link:hover { color: var(--fg) }
+.rack-link svg { flex: none }
 
 dialog { width: min(700px, calc(100% - 48px)); padding: 18px; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 4px }
 dialog::backdrop { background: rgba(0, 0, 0, .6) }
@@ -241,33 +248,42 @@ dialog.help[open] { display: flex; flex-direction: column }
   .help-body { columns: 3; column-gap: 52px }
 }
 
-/* short desktop windows (a laptop screen): tighten the faceplate so the screen keeps its height */
-@media (max-height: 840px) {
+/* short desktop windows (a laptop screen), and narrower ones of middling height, where the
+   readouts take a row of their own: tighten the faceplate so the screen keeps its height */
+@media (max-height: 840px), (max-width: 1399px) and (max-height: 960px) {
   .app { gap: 10px; padding-block: 12px }
   .brand h1 { font-size: 26px }
   .btn, .seg label { height: 36px }
-  .btn-small { height: 34px }
   .verdict { padding: 10px 16px }
   .verdict-title { font-size: 30px }
   .lamps { grid-auto-rows: minmax(34px, 1fr) }
   .tile { padding: 8px 12px }
   .cover { padding-block: 8px }
   .cover-grid { row-gap: 6px }
-  .work, .side { gap: 10px }
+  .work { gap: 10px }
+}
+
+/* windows of middling height (a 1080p screen once the browser's bars are taken off): tighten
+   the rack first, so the event log keeps a few rows above the foot of the rack. This block
+   comes after the one above so that its smaller keys win there too. */
+@media (max-height: 960px) {
+  .work { row-gap: 10px }
+  .side { gap: 10px }
   .checks, .wheel { padding: 9px 12px }
   .check-list { margin-top: 6px; gap: 5px }
+  .btn-small { height: 34px }
+  .log { min-height: 53px }
 }
 
 /* the tagline only where the faceplate has room for it */
-@media (max-width: 1699px) {
+@media (max-width: 1339px) {
   .tagline { display: none }
 }
 
-/* narrower desktop windows: the readouts drop under the lamps, and the key hints go */
+/* narrower desktop windows: the readouts drop under the lamps */
 @media (max-width: 1399px) {
   .summary { grid-template-columns: minmax(320px, 400px) minmax(0, 1fr) }
   .tiles { grid-column: 1 / -1 }
-  .bar kbd { display: none }
 }
 </style>
 
@@ -278,18 +294,16 @@ dialog.help[open] { display: flex; flex-direction: column }
       <p class="tagline">Roll anywhere on this page</p>
     </div>
     <div class="controls">
-      <button class="btn" type="button" id="btn-help">How to use it <kbd>?</kbd></button>
       <div class="seg" role="radiogroup" aria-label="Time shown across the screen">
         <span class="lbl" aria-hidden="true">Span</span>
         <input type="radio" name="zoom" id="zoom-3" value="3"><label for="zoom-3">3 s</label>
-        <input type="radio" name="zoom" id="zoom-6" value="6" checked><label for="zoom-6">6 s</label>
-        <input type="radio" name="zoom" id="zoom-12" value="12"><label for="zoom-12">12 s</label>
+        <input type="radio" name="zoom" id="zoom-6" value="6"><label for="zoom-6">6 s</label>
+        <input type="radio" name="zoom" id="zoom-12" value="12" checked><label for="zoom-12">12 s</label>
         <input type="radio" name="zoom" id="zoom-30" value="30"><label for="zoom-30">30 s</label>
       </div>
       <button class="btn" type="button" id="btn-pause" aria-pressed="false"><span id="btn-pause-text">Pause</span> <kbd>Space</kbd></button>
       <button class="btn" type="button" id="btn-reset">Reset <kbd>R</kbd></button>
       <button class="btn" type="button" id="btn-full" aria-pressed="false">Full screen <kbd>F</kbd></button>
-      <a class="btn" href="https://github.com/SirSnipesalot/scroll-wheel-tester" target="_blank" rel="noopener">GitHub</a>
     </div>
   </header>
 
@@ -403,6 +417,11 @@ dialog.help[open] { display: flex; flex-direction: column }
       </section>
 
     </aside>
+
+    <nav class="rack-foot" aria-label="Guide and source">
+      <button class="btn btn-small" type="button" id="btn-help">How to use it <kbd>?</kbd></button>
+      <a class="rack-link" href="https://github.com/SirSnipesalot/scroll-wheel-tester" target="_blank" rel="noopener">Source on GitHub <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M2.5 7.5L7.5 2.5M3.5 2.5H7.5V6.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg></a>
+    </nav>
   </div>
 </div>
 
@@ -541,7 +560,7 @@ const S = {
   wdHist: new Map(), wdN: 0,                  // legacy wheelDelta sizes, where one notch is 120
   model: 'delta', hires: false, perNotch: 1,  // how notches are counted (see analyse)
   rolls: [],
-  paused: false, sample: false, full: false, zoom: 6,
+  paused: false, sample: false, full: false, zoom: 12,
   clicks: 0, bounces: 0, tiltL: 0, tiltR: 0, lastMidUp: -1e9, midHeld: false, clickUntil: -1e9,
   zero: 0,           // wheel events with no movement in them at all
   dirty: true, statsDirty: true,
@@ -928,17 +947,23 @@ function draw(now) {
   ctx.fillStyle = C.muted; ctx.textAlign = 'center';
   for (let i = 0; i < pauses.length; i += 2) ctx.fillText(pauseText(pauses[i + 1]), pauses[i], yA1 + 10);
 
-  // each roll: a solid run along the baseline, with its notch count on the empty side
+  // each roll: a solid run along the baseline, with its notch count on the empty side.
+  // The count is drawn when the roll is wide enough to carry it, or when the tape is zoomed
+  // in far enough that rolls sit well apart, and never on top of the count next to it.
   const su = new Path2D(), sd = new Path2D();
+  const spread = k >= 0.06;
+  const free = [Infinity, Infinity];   // left edge of the last count drawn: below the line, above it
   for (let j = S.rolls.length - 1; j >= 0; j--) {
     const s = S.rolls[j];
     if (s.i1 < i0) break;
     if (s.k < 2 || s.i1 >= N) continue;
-    const xa = X(ev[s.i0]), xb = X(ev[s.i1]);
-    (s.dir > 0 ? su : sd).rect(xa - bw / 2, yMid - 1.5, xb - xa + bw, 3);
-    if (xb - xa >= 14) {
-      ctx.fillStyle = s.dir > 0 ? C.up : C.down;
-      ctx.fillText(String(s.n), (xa + xb) / 2, s.dir > 0 ? yMid + 11 : yMid - 11);
+    const xa = X(ev[s.i0]), xb = X(ev[s.i1]), up = s.dir > 0 ? 1 : 0;
+    (up ? su : sd).rect(xa - bw / 2, yMid - 1.5, xb - xa + bw, 3);
+    const text = String(s.n), half = ctx.measureText(text).width / 2, cx = (xa + xb) / 2;
+    if ((spread || xb - xa >= 14) && cx + half + 4 <= free[up]) {
+      ctx.fillStyle = up ? C.up : C.down;
+      ctx.fillText(text, cx, up ? yMid + 11 : yMid - 11);
+      free[up] = cx - half;
     }
   }
   ctx.fillStyle = C.up; ctx.fill(su);
@@ -1488,8 +1513,11 @@ window.addEventListener('keydown', (e) => {
   else if (k === 'f') toggleFull();
 });
 
+// The chosen span is remembered. Its key was renamed when the default went from 6 s to 12 s,
+// so a choice saved before that starts again from the new default.
 try {
-  const z = localStorage.getItem('swt-span');
+  localStorage.removeItem('swt-span');
+  const z = localStorage.getItem('swt-span-s');
   if (z && $('zoom-' + z)) $('zoom-' + z).checked = true;
 } catch (err) {}
 document.querySelectorAll('input[name="zoom"]').forEach((r) => {
@@ -1497,30 +1525,43 @@ document.querySelectorAll('input[name="zoom"]').forEach((r) => {
   r.addEventListener('change', () => {
     if (!r.checked) return;
     S.zoom = +r.value; S.dirty = true;
-    try { localStorage.setItem('swt-span', r.value); } catch (err) {}
+    try { localStorage.setItem('swt-span-s', r.value); } catch (err) {}
   });
 });
 
 // ---------- example trace shown until the first real event ----------
-// Rolled the way a person does it: a few notches per roll, a pause while the
-// finger comes back, then the next roll. One fault of each main kind is planted in it.
+// Rolled the way a person does it: a few notches per roll, a pause while the finger comes
+// back, then the next roll. It is long enough to fill the default 12 s span, it touches all
+// four kinds of roll test, and one fault of each main kind is planted in it.
 function loadSample() {
   let t = 1000, seed = 11;
   const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
   const roll = (dy, dt) => { t += dt; ingest(dy, 0, t); };
-  const rollMany = (dy, n, pause) => { for (let i = 0; i < n; i++) roll(dy, i ? 26 + rnd() * 10 : pause); };
+  // n notches one way: the first after `pause`, the rest `gap` to `gap + spread` ms apart
+  const rollMany = (dy, n, pause, gap = 26, spread = 10) => {
+    for (let i = 0; i < n; i++) roll(dy, i ? gap + rnd() * spread : pause);
+  };
+  // normal scrolling, down
   rollMany(100, 5, 0);
   rollMany(100, 4, 240);
   rollMany(100, 3, 250); roll(-100, 5); rollMany(100, 3, 26);    // reversed in the middle of a roll
   rollMany(100, 6, 235); roll(-100, 12);                         // bounce-back as the roll ends
   rollMany(100, 4, 270);
   t += 1300;
+  // normal scrolling, up
   rollMany(-100, 5, 0);
   rollMany(-100, 4, 225);
   roll(100, 130); rollMany(-100, 5, 160);                        // back-step while the finger returns
   rollMany(-100, 6, 245);
   t += 900;
-  for (let i = 0; i < 3; i++) roll(100, i ? 380 + rnd() * 80 : 0);   // single notches
+  rollMany(100, 7, 0, 380, 80);                                  // single notches, down
+  t += 1100;
+  rollMany(-100, 10, 0, 82, 26);                                 // slow rolls, up
+  rollMany(-100, 10, 320, 82, 26);
+  t += 1000;
+  rollMany(100, 10, 0, 12, 5);                                   // fast flicks, down: enough to finish that box
+  rollMany(100, 10, 300, 12, 5);
+  rollMany(100, 10, 290, 12, 5);
   closeRun();
   S.sample = true;
 }

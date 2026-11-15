@@ -2,9 +2,11 @@
 
 Think your mouse's scroll wheel is going bad? This page tests it and tells you.
 
-**[Open the tester](https://sirsnipesalot.github.io/scroll-wheel-tester/)**. It runs in your browser. There is nothing to download or install.
+## [Open the tester →](https://sirsnipesalot.github.io/scroll-wheel-tester/)
 
-![The tester as it looks when you first open it, showing an example recording](screenshot.png)
+It runs in your browser. There is nothing to download or install.
+
+[![Open the tester. The picture shows it as it looks when you first open it, with an example recording.](screenshot.png)](https://sirsnipesalot.github.io/scroll-wheel-tester/)
 
 ## What it is for
 
@@ -115,7 +117,8 @@ If the fault is still there after all that, it is the mouse. Under warranty, sen
 - **Wheel click** counts presses of the wheel button. A "double-fire" is a second press that arrives too soon after the first to be you, which points to a worn button.
 - **Sideways** counts left and right signals, if your wheel tilts.
 - **Event log.** Every signal, newest first.
-- **How to use it** opens a short version of this guide on the page. **Span** sets how many seconds of rolling fit across the chart. **Pause** stops recording and gives the wheel back to the page. **Reset** clears the recording. **Full screen** does what it says. **GitHub** brings you back here.
+- **Span** sets how many seconds of rolling fit across the chart. **Pause** stops recording and gives the wheel back to the page. **Reset** clears the recording. **Full screen** does what it says.
+- **How to use it**, at the bottom right, opens a short version of this guide on the page. The **Source on GitHub** link next to it brings you back here.
 
 ## Keyboard shortcuts
 
