@@ -1,0 +1,1479 @@
+<!doctype html>
+<!--
+  Scroll Wheel Tester
+  Copyright (C) 2026 SirSnipesalot
+
+  This program is free software: you can redistribute it and/or modify it under the terms of the
+  GNU General Public License as published by the Free Software Foundation, version 3.
+
+  This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without
+  even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
+  General Public License in the LICENSE file for more details.
+-->
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Scroll Wheel Tester</title>
+<meta name="description" content="Test a mouse scroll wheel for reversed notches, bounce-back, dropped notches and ghost scrolling. Runs in the browser, nothing to install.">
+<meta name="theme-color" content="#1a1b1d">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="icon" href="icon-192.png" sizes="192x192" type="image/png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Martian+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: a bench instrument. Faceplate header with keys, an annunciator row (verdict lamp,
+   one lamp per kind of fault, numeric readouts), a coverage strip, then the screen (the tape)
+   with the checks, wheel map and event log racked beside it. One look, dark, desktop only. */
+:root {
+  color-scheme: dark;
+  --bg: #1a1b1d; --panel: #222326; --well: #141516; --screen: #0b0c0d; --bezel: #121314; --key: #26272a;
+  --line: #34363a; --key-line: #3a3c40; --grid: #1b1e21; --grid-strong: #3c4045;
+  --fg: #e9e5d9; --muted: #a9a595; --dim: #979385; --ink: #1a1b1d;
+  --up: #7cd6e8; --down: #ffb23e; --glitch: #ff5a47; --glitch-soft: rgba(255, 90, 71, .16);
+  --good: #7ddc8a; --warn: #ffb23e; --accent: #7cd6e8;
+  --font-face: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --font-data: "Martian Mono", Consolas, ui-monospace, monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box }
+html, body { height: 100% }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 500 16px/1.3 var(--font-face); letter-spacing: .02em; -webkit-font-smoothing: antialiased }
+[hidden] { display: none !important }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px }
+h2, h3 { margin: 0; font: 600 15px/1.1 var(--font-face); letter-spacing: .14em; text-transform: uppercase }
+.lbl { font: 500 13px/1.1 var(--font-face); letter-spacing: .14em; text-transform: uppercase; color: var(--muted) }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 4px }
+
+.app {
+  height: 100%; min-height: 700px;
+  display: grid; grid-template-rows: auto auto auto minmax(0, 1fr); gap: 14px;
+  padding-block: 20px;
+  padding-left: max(24px, env(safe-area-inset-left, 0px));
+  padding-right: max(24px, env(safe-area-inset-right, 0px));
+}
+
+/* ---- faceplate ---- */
+.bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 24px }
+.brand { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 18px; min-width: 0 }
+.brand h1 { margin: 0; font: 600 32px/1 var(--font-face); letter-spacing: .14em; text-transform: uppercase }
+.tagline { margin: 0; font-size: 15px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted) }
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px }
+.btn {
+  height: 44px; padding: 0 16px; display: inline-flex; align-items: center; gap: 10px;
+  background: var(--key); color: var(--fg); border: 1px solid var(--key-line); border-radius: 3px;
+  font: 500 16px/1 var(--font-face); letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; cursor: pointer;
+}
+.btn:hover { border-color: var(--muted) }
+.btn:active { background: var(--well) }
+.btn:disabled { opacity: .45; cursor: default }
+.btn[aria-pressed="true"], .btn-go { background: var(--fg); border-color: var(--fg); color: var(--ink); font-weight: 600 }
+.btn-small { height: 40px; padding: 0 10px; gap: 8px; font-size: 15px }
+.btn-step { width: 28px; height: 28px; padding: 0; justify-content: center; font: 500 13px/1 var(--font-data); letter-spacing: 0 }
+kbd { font: 400 10px/1 var(--font-data); letter-spacing: 0; text-transform: uppercase; color: var(--muted) }
+.btn[aria-pressed="true"] kbd, .btn-go kbd { color: inherit }
+.seg { display: inline-flex; align-items: center; gap: 2px; margin-right: 10px }
+.seg .lbl { margin-right: 8px }
+.seg input { position: absolute; opacity: 0; pointer-events: none }
+.seg label {
+  height: 44px; min-width: 50px; padding: 0 12px; display: inline-flex; align-items: center; justify-content: center;
+  background: var(--key); color: var(--fg); border: 1px solid var(--key-line);
+  font: 500 12px/1 var(--font-data); letter-spacing: 0; cursor: pointer;
+}
+.seg label:first-of-type { border-radius: 3px 0 0 3px }
+.seg label:last-of-type { border-radius: 0 3px 3px 0 }
+.seg label:hover { border-color: var(--muted) }
+.seg input:checked + label { background: var(--fg); border-color: var(--fg); color: var(--ink); font-weight: 600 }
+.seg input:focus-visible + label { outline: 2px solid var(--accent); outline-offset: 2px }
+
+/* ---- annunciator row: verdict lamp, a lamp per kind of fault, numeric readouts ---- */
+.summary { display: grid; grid-template-columns: 380px minmax(0, 1fr) 520px; gap: 14px }
+.verdict { display: flex; align-items: center; gap: 18px; padding: 14px 18px; --lamp: var(--muted) }
+.verdict[data-level="good"] { --lamp: var(--good) }
+.verdict[data-level="warn"] { --lamp: var(--warn) }
+.verdict[data-level="crit"] { --lamp: var(--glitch) }
+.lamp {
+  flex: none; width: 26px; height: 26px; border-radius: 50%; background: var(--lamp);
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--lamp) 18%, transparent), 0 0 24px color-mix(in srgb, var(--lamp) 60%, transparent);
+}
+.verdict[data-level="idle"] .lamp { box-shadow: 0 0 0 6px color-mix(in srgb, var(--lamp) 18%, transparent) }
+.verdict-title { display: block; font: 600 36px/1 var(--font-face); letter-spacing: .1em; text-transform: uppercase; color: var(--lamp) }
+.verdict[data-level="idle"] .verdict-title { color: var(--fg) }
+.verdict-detail { display: block; margin-top: 6px; font-size: 16px; line-height: 1.25; letter-spacing: .03em; color: var(--muted) }
+.lamps { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-auto-rows: minmax(42px, 1fr); gap: 6px }
+.lamps li {
+  min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 12px;
+  background: var(--panel); color: var(--dim); border: 1px solid var(--line); border-radius: 3px;
+  font: 500 15px/1 var(--font-face); letter-spacing: .1em; text-transform: uppercase; white-space: nowrap;
+}
+.lamps li span { min-width: 0; overflow: hidden; text-overflow: ellipsis }
+.lamps li b { font: 500 18px/1 var(--font-data); letter-spacing: 0 }
+.lamps li[data-lit="bad"] { background: var(--glitch); border-color: var(--glitch); color: var(--ink); font-weight: 600 }
+.lamps li[data-lit="warn"] { background: var(--warn); border-color: var(--warn); color: var(--ink); font-weight: 600 }
+.lamps li[data-lit="bad"] b, .lamps li[data-lit="warn"] b { font-weight: 600 }
+.tiles { margin: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 4px; overflow: hidden }
+.tile { min-width: 0; padding: 10px 12px; background: var(--well); display: flex; flex-direction: column; gap: 6px }
+.tile dt { font: 500 13px/1.1 var(--font-face); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.tile dd { margin: 0; font: 500 19px/1 var(--font-data); letter-spacing: 0; white-space: nowrap }
+.tile small { display: block; margin-top: 7px; font: 400 10px/1.2 var(--font-data); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
+.tile.is-up dd span { color: var(--up) }
+.tile.is-down dd span { color: var(--down) }
+.tile.is-bad dd span { color: var(--glitch) }
+
+/* ---- coverage: every speed and direction the wheel has been tried at ---- */
+.cover { display: grid; grid-template-columns: 96px minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: center; padding: 10px 16px }
+.cover-group { display: grid; grid-template-columns: 48px repeat(4, minmax(0, 1fr)); gap: 10px; align-items: center }
+.cover-dir { font: 600 15px/1 var(--font-face); letter-spacing: .14em; text-transform: uppercase }
+.cover-dir.is-down { color: var(--down) }
+.cover-dir.is-up { color: var(--up) }
+.cell { min-width: 0; display: flex; flex-direction: column; gap: 5px }
+.cell-top { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; white-space: nowrap; overflow: hidden }
+.cell-name { font: 500 13px/1.1 var(--font-face); letter-spacing: .12em; text-transform: uppercase; color: var(--muted) }
+.cell-val { font: 500 11px/1 var(--font-data); letter-spacing: 0 }
+.cell-bar { display: block; height: 4px; background: var(--line) }
+.cell-bar b { display: block; height: 100%; width: 0; background: var(--muted) }
+.cell[data-state="none"] .cell-val { color: var(--dim) }
+.cell[data-state="ok"] .cell-val { color: var(--good) }
+.cell[data-state="ok"] .cell-bar b { background: var(--good) }
+.cell[data-state="bad"] .cell-name, .cell[data-state="bad"] .cell-val { color: var(--glitch) }
+.cell[data-state="bad"] .cell-bar b { background: var(--glitch) }
+
+/* ---- the screen, and the rack beside it ---- */
+.work { min-height: 0; display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 14px }
+.tape { position: relative; min-height: 300px; background: var(--screen); border-radius: 8px; box-shadow: inset 0 0 0 1px var(--line), inset 0 0 0 5px var(--bezel); overflow: hidden }
+#chart { position: absolute; inset: 0; width: 100%; height: 100%; display: block }
+.legend { position: absolute; top: 17px; left: 54px; margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 4px 22px; font: 400 10px/1 var(--font-data); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); pointer-events: none }
+.legend i { display: inline-block; width: 9px; height: 9px; margin-right: 7px; vertical-align: -1px; background: var(--muted) }
+.legend .k-up i { background: var(--up) }
+.legend .k-down i { background: var(--down) }
+.legend .k-bad i { background: var(--glitch) }
+.legend .k-maybe i { background: none; border: 1.5px solid var(--glitch) }
+.live { position: absolute; top: 17px; right: 22px; margin: 0; font: 400 10px/1 var(--font-data); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); pointer-events: none }
+.flag-note { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); margin: 0; padding: 4px 12px; border-radius: 3px; background: var(--fg); color: var(--ink); font: 600 13px/1.3 var(--font-face); letter-spacing: .14em; text-transform: uppercase; white-space: nowrap; pointer-events: none }
+.flag-note.is-live { background: var(--accent) }
+.hint { position: absolute; left: 50%; top: 27%; transform: translate(-50%, -50%); margin: 0; width: min(520px, calc(100% - 48px)); text-align: center; pointer-events: none }
+.hint strong { display: block; font: 600 28px/1.1 var(--font-face); letter-spacing: .12em; text-transform: uppercase }
+.hint span { display: block; margin-top: 6px; color: var(--muted) }
+
+.side { min-height: 0; display: flex; flex-direction: column; gap: 14px; overflow: auto }
+.checks { flex: none; padding: 12px 14px }
+.check-list { margin: 10px 0 0; padding: 0; list-style: none; display: grid; gap: 8px }
+.check-list li { display: flex; align-items: center; justify-content: space-between; gap: 10px }
+.check-name { display: block; font-size: 17px; letter-spacing: .04em }
+.check-res { display: block; margin-top: 3px; font: 400 10px/1.45 var(--font-data); letter-spacing: 0; color: var(--muted) }
+.check-res.is-good { color: var(--good) }
+.check-res.is-bad { color: var(--glitch) }
+.check-res.is-warn { color: var(--warn) }
+.run-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 28px }
+.run-head h3 { color: var(--accent) }
+.stepper { display: inline-flex; align-items: center; gap: 8px }
+.stepper output { min-width: 2ch; text-align: center; font: 500 13px/1 var(--font-data); letter-spacing: 0 }
+.run-read { margin: 10px 0 0; display: flex; align-items: baseline; gap: 10px }
+.run-num { font: 500 34px/1 var(--font-data); letter-spacing: 0; color: var(--accent) }
+.run-unit { font: 400 10px/1.3 var(--font-data); letter-spacing: 0; color: var(--muted) }
+.run-note { margin: 8px 0 0; line-height: 1.25; color: var(--muted) }
+.run-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px }
+
+.wheel { flex: none; display: grid; grid-template-columns: 124px minmax(0, 1fr); gap: 14px; align-items: center; padding: 12px 14px }
+#dial { width: 124px; height: 124px; display: block }
+.facts { margin: 0; display: grid; gap: 9px }
+.facts dd { margin: 3px 0 0; font: 500 13px/1.3 var(--font-data); letter-spacing: 0 }
+.facts small { display: block; margin-top: 2px; font: 400 10px/1.35 var(--font-data); color: var(--muted) }
+.facts small.is-bad { color: var(--glitch) }
+.dot { display: inline-block; width: 9px; height: 9px; margin-right: 8px; border-radius: 50%; border: 1px solid var(--muted) }
+.dot.on { background: var(--accent); border-color: var(--accent) }
+
+.log { flex: 1 1 auto; min-height: 150px; display: flex; flex-direction: column; overflow: hidden }
+.log-head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 8px 8px 14px; border-bottom: 1px solid var(--line) }
+.log-head small { display: block; margin-top: 4px; min-height: 12px; font: 400 10px/1.2 var(--font-data); letter-spacing: 0; color: var(--muted) }
+.log-tools { display: flex; gap: 6px }
+.log-scroll { flex: 1; min-height: 0; overflow: auto; padding: 4px 0 6px }
+.log table { width: 100%; border-collapse: collapse; font: 400 11px/1.9 var(--font-data); letter-spacing: 0 }
+.log th { position: sticky; top: 0; padding: 0 14px 0 0; text-align: right; font-weight: 400; color: var(--muted); background: var(--panel) }
+.log td { padding: 0 14px 0 0; text-align: right; white-space: nowrap }
+.log th:first-child, .log td:first-child { padding-left: 14px; text-align: left }
+.log tr.up .dir { color: var(--up) }
+.log tr.down .dir { color: var(--down) }
+.log tr.bad td, .log tr.maybe td { color: var(--glitch) }
+.log tr.bad td { background: var(--glitch-soft) }
+.log-empty { margin: 0; padding: 10px 14px; color: var(--muted) }
+
+.how { flex: none; padding: 11px 14px }
+.how summary { font: 600 15px/1.1 var(--font-face); letter-spacing: .14em; text-transform: uppercase; cursor: pointer }
+.how p { margin: 10px 0 0; line-height: 1.3; color: var(--muted) }
+.how b { color: var(--fg); font-weight: 600 }
+.how a { color: var(--accent) }
+
+dialog { width: min(700px, calc(100% - 48px)); padding: 18px; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 4px }
+dialog::backdrop { background: rgba(0, 0, 0, .6) }
+dialog p { margin: 0 0 12px }
+dialog textarea { display: block; width: 100%; height: 280px; margin-bottom: 14px; padding: 10px; font: 400 11px/1.6 var(--font-data); color: var(--fg); background: var(--screen); border: 1px solid var(--line); border-radius: 3px; resize: vertical }
+
+/* short desktop windows (a laptop screen): tighten the faceplate so the screen keeps its height */
+@media (max-height: 840px) {
+  .app { gap: 10px; padding-block: 12px }
+  .brand h1 { font-size: 26px }
+  .btn, .seg label { height: 36px }
+  .btn-small { height: 34px }
+  .verdict { padding: 10px 16px }
+  .verdict-title { font-size: 30px }
+  .lamps { grid-auto-rows: minmax(34px, 1fr) }
+  .tile { padding: 8px 12px }
+  .cover { padding-block: 8px }
+  .work, .side { gap: 10px }
+  .checks, .wheel { padding: 9px 12px }
+  .check-list { margin-top: 6px; gap: 5px }
+}
+
+/* narrower desktop windows: the readouts drop under the lamps, then coverage stacks */
+@media (max-width: 1399px) {
+  .summary { grid-template-columns: minmax(320px, 400px) minmax(0, 1fr) }
+  .tiles { grid-column: 1 / -1 }
+}
+@media (max-width: 1239px) {
+  .cover { grid-template-columns: 96px minmax(0, 1fr); row-gap: 10px }
+  .cover-group + .cover-group { grid-column: 2 }
+}
+</style>
+
+<div class="app">
+  <header class="bar">
+    <div class="brand">
+      <h1>Scroll Wheel Tester</h1>
+      <p class="tagline">Roll anywhere on this page</p>
+    </div>
+    <div class="controls">
+      <div class="seg" role="radiogroup" aria-label="Time shown across the screen">
+        <span class="lbl" aria-hidden="true">Span</span>
+        <input type="radio" name="zoom" id="zoom-3" value="3"><label for="zoom-3">3 s</label>
+        <input type="radio" name="zoom" id="zoom-6" value="6" checked><label for="zoom-6">6 s</label>
+        <input type="radio" name="zoom" id="zoom-12" value="12"><label for="zoom-12">12 s</label>
+        <input type="radio" name="zoom" id="zoom-30" value="30"><label for="zoom-30">30 s</label>
+      </div>
+      <button class="btn" type="button" id="btn-pause" aria-pressed="false"><span id="btn-pause-text">Pause</span> <kbd>Space</kbd></button>
+      <button class="btn" type="button" id="btn-reset">Reset <kbd>R</kbd></button>
+      <button class="btn" type="button" id="btn-full" aria-pressed="false">Full screen <kbd>F</kbd></button>
+    </div>
+  </header>
+
+  <section class="summary" aria-label="Results">
+    <div class="verdict panel" id="verdict" data-level="idle">
+      <span class="lamp" aria-hidden="true"></span>
+      <div aria-live="polite">
+        <strong class="verdict-title" id="verdict-title">Ready</strong>
+        <span class="verdict-detail" id="verdict-detail">Roll the wheel the way you normally scroll.</span>
+      </div>
+    </div>
+    <ul class="lamps" aria-label="Faults by kind">
+      <li id="l-rev" data-lit="off" title="An event against the roll in the middle of a stroke. Certain: no finger turns a wheel back that fast."><span>Reversed</span><b>0</b></li>
+      <li id="l-bounce" data-lit="off" title="An event against the roll straight after the last notch of a stroke, as the wheel settles. Certain."><span>Bounce-back</span><b>0</b></li>
+      <li id="l-start" data-lit="off" title="An event against the roll just before a stroke gets going. Certain."><span>False start</span><b>0</b></li>
+      <li id="l-back" data-lit="off" title="One slow event against the roll in the pause between two strokes. Suspect: it may be your finger dragging the wheel back."><span>Back-step</span><b>0</b></li>
+      <li id="l-rest" data-lit="off" title="Events that arrived during the hands-off check, with nobody touching the wheel. Certain."><span>Hands off</span><b>0</b></li>
+      <li id="l-click" data-lit="off" title="Wheel events that arrived as the wheel button was pressed. Suspect: pressing can nudge the wheel."><span>On click</span><b>0</b></li>
+    </ul>
+    <dl class="tiles">
+      <div class="tile is-up"><dt>Up</dt><dd><span id="s-up">0</span><small>notches</small></dd></div>
+      <div class="tile is-down"><dt>Down</dt><dd><span id="s-down">0</span><small>notches</small></dd></div>
+      <div class="tile" id="t-rate"><dt>Fault rate</dt><dd><span id="s-rate">0%</span><small id="s-rate-sub">of events</small></dd></div>
+      <div class="tile" id="t-stroke"><dt>Stroke</dt><dd><span id="s-stroke">&ndash;</span><small id="s-stroke-sub">per stroke</small></dd></div>
+      <div class="tile"><dt>Notch size</dt><dd><span id="s-step">&ndash;</span><small id="s-step-sub">per notch</small></dd></div>
+    </dl>
+  </section>
+
+  <section class="cover panel" aria-label="Coverage: speeds and directions tested">
+    <h2>Coverage</h2>
+    <div class="cover-group" id="cover-0"><span class="cover-dir is-down">Down</span></div>
+    <div class="cover-group" id="cover-1"><span class="cover-dir is-up">Up</span></div>
+  </section>
+
+  <div class="work">
+    <section class="tape" aria-label="Live trace">
+      <canvas id="chart" aria-label="Chart of wheel events over time"></canvas>
+      <ul class="legend" aria-hidden="true">
+        <li class="k-up"><i></i>Up</li>
+        <li class="k-down"><i></i>Down</li>
+        <li class="k-bad"><i></i>Fault</li>
+        <li class="k-maybe"><i></i>Suspect</li>
+      </ul>
+      <p class="live" id="live">0 notches/s</p>
+      <p class="flag-note" id="sample-flag" hidden>Example trace</p>
+      <p class="flag-note" id="paused-flag" hidden>Paused, wheel released</p>
+      <p class="flag-note is-live" id="check-flag" hidden></p>
+      <p class="hint" id="hint" hidden><strong>Roll the wheel</strong><span>Scroll the way you normally do, stroke after stroke. Try single notches, slow rolls and fast flicks, both ways.</span></p>
+    </section>
+
+    <aside class="side">
+      <section class="checks panel" aria-label="Checks">
+        <div id="check-idle">
+          <h2>Checks</h2>
+          <ul class="check-list">
+            <li><div><span class="check-name">Notches per turn</span><span class="check-res" id="res-turn">Not measured</span></div><button class="btn btn-small" type="button" id="btn-turn">Count <kbd>T</kbd></button></li>
+            <li><div><span class="check-name">Counted notches</span><span class="check-res" id="res-count">Not run</span></div><button class="btn btn-small" type="button" id="btn-count">Count <kbd>C</kbd></button></li>
+            <li><div><span class="check-name">Hands off</span><span class="check-res" id="res-rest">Not run</span></div><button class="btn btn-small" type="button" id="btn-rest">Start <kbd>H</kbd></button></li>
+          </ul>
+        </div>
+        <div id="check-run" hidden>
+          <div class="run-head">
+            <h3 id="run-title">Notches per turn</h3>
+            <div class="stepper" id="run-stepper" role="group" aria-label="Adjust">
+              <span class="lbl" id="step-name">Turns</span>
+              <button class="btn btn-step" type="button" id="step-less" aria-label="One fewer">&minus;</button>
+              <output id="step-n">1</output>
+              <button class="btn btn-step" type="button" id="step-more" aria-label="One more">+</button>
+            </div>
+          </div>
+          <p class="run-read"><span class="run-num" id="run-num">0</span> <span class="run-unit" id="run-unit"></span></p>
+          <p class="run-note" id="run-note" aria-live="polite"></p>
+          <div class="run-actions">
+            <button class="btn btn-small btn-go" type="button" id="btn-run-done">Done <kbd>Enter</kbd></button>
+            <button class="btn btn-small" type="button" id="btn-run-cancel">Cancel <kbd>Esc</kbd></button>
+          </div>
+        </div>
+      </section>
+
+      <section class="wheel panel" aria-label="Wheel map">
+        <canvas id="dial" aria-label="Wheel map: where on the wheel the faults happened"></canvas>
+        <dl class="facts">
+          <div><dt class="lbl">Wheel map</dt><dd><span id="w-turn">24 notches</span><small id="w-turn-sub">per turn, assumed</small></dd></div>
+          <div><dt class="lbl">Wheel click</dt><dd><span class="dot" id="x-held"></span><span id="x-click">0</span><small id="x-click-sub">0 double-fires</small></dd></div>
+          <div><dt class="lbl">Sideways</dt><dd><span id="x-tilt">0 / 0</span></dd></div>
+        </dl>
+      </section>
+
+      <section class="log panel" aria-label="Event log">
+        <div class="log-head">
+          <div><h2>Event log</h2><small id="log-count"></small></div>
+          <div class="log-tools">
+            <button class="btn btn-small" type="button" id="btn-report">Copy report</button>
+            <button class="btn btn-small" type="button" id="btn-copy">Copy CSV</button>
+          </div>
+        </div>
+        <div class="log-scroll" id="log-scroll">
+          <table>
+            <thead><tr><th scope="col">#</th><th scope="col">Time s</th><th scope="col">Gap ms</th><th scope="col">Result</th></tr></thead>
+            <tbody id="log-body"></tbody>
+          </table>
+          <p class="log-empty" id="log-empty" hidden>No events yet.</p>
+        </div>
+      </section>
+
+      <details class="how panel" id="how">
+        <summary>How to read it</summary>
+        <p>Scroll the way you normally do. People roll a wheel in finger strokes: two to seven notches, a pause while the finger comes back, then the next stroke. The tester splits your rolling into those strokes, drawn as solid runs along the centre line with the notches in each, and judges every wrong-way event by where it falls in a stroke.</p>
+        <p><b>Reversed</b> is an event against the roll in the middle of a stroke that flipped within 60 ms; a <b>false start</b> is the same thing just before a stroke gets going. A finger cannot turn a wheel back that fast, so it is the wheel: usually dirty or worn encoder contacts. <b>Bounce-back</b> is a wrong-way event straight after the last notch of a stroke, as the wheel settles or the finger lifts. <b>Back-step</b> is one slow event against the roll in the pause between two strokes. That can be the wheel, or your finger dragging it back on the way to the next stroke, so it counts as suspect: lift your finger clear between strokes and see if they stop.</p>
+        <p><b>Coverage</b> shows how much rolling each direction has had at each speed: single notches, slow rolls, normal strokes and fast flicks. Faults often show at one speed only, so the verdict stays at "clean so far" until every cell has had enough. Slow, steady rolling exposes the most: the browser hands over wheel events once per screen frame and adds up what arrived in between, so in a fast flick a stray can cancel against a real notch.</p>
+        <p><b>Checks</b> need you to take part. <b>Notches per turn</b>: mark the wheel, roll whole turns, and the count per turn falls out. Most wheels have 24 notches, 15&deg; apart; 18 is the other common count. <b>Counted notches</b>: roll exactly ten clicks by feel. If the tester saw nine or eleven, the wheel is dropping or doubling notches; dust in the wheel sensor is the usual cause of dropped ones. <b>Hands off</b>: ten seconds without touching the wheel. Anything it reports then, it is doing by itself.</p>
+        <p>The <b>wheel map</b> is one turn of the wheel. The hand shows where the wheel is now and each dot is a fault. Once the notches per turn are measured, dots piling up in one place suggest the fault sits at one spot on the wheel, which is worth knowing if you open the mouse to clean it.</p>
+        <p><b>Notch size</b> is what your browser reports for one notch. A high-resolution wheel sends several events per notch and steps back a little as it settles; the tester spots that and stops calling those faults. If the sizes vary, you have a smooth wheel, a touchpad or OS acceleration, and the fault counts mean less. <b>Wheel click</b> counts presses of the wheel button; a double-fire is a second press under 50 ms after release, which points to a worn switch.</p>
+        <p><b>Before you blame the wheel:</b> blow it out with compressed air, close the mouse maker's software or turn off its smooth scrolling, plug in directly instead of through a hub, and try another port or another computer. A fault that follows the mouse is the mouse. If faults stop while you press the wheel gently sideways, its axle is loose in the encoder.</p>
+      </details>
+    </aside>
+  </div>
+</div>
+
+<dialog id="csv-dialog" aria-labelledby="csv-title">
+  <p id="csv-title">Your browser blocked the clipboard. Select the text below and copy it.</p>
+  <textarea id="csv-text" readonly aria-label="Text to copy"></textarea>
+  <button class="btn" type="button" id="csv-close">Close</button>
+</dialog>
+
+<script>
+(() => {
+'use strict';
+const $ = (id) => document.getElementById(id);
+
+// ---------- thresholds (milliseconds unless noted) ----------
+const CFG = {
+  idleGap: 700,      // the tape stops this long after the last event
+  settle: 500,       // silence that ends a roll; the next event starts fresh. macOS, libinput and
+                     // Chromium all end a scroll after 500 ms without input.
+  strokeGap: 130,    // a pause longer than this separates two finger strokes. Notch intervals are
+                     // bimodal with the dip just above 100 ms (Hinckley 2002); Microsoft's wheel
+                     // code keeps events 130 ms apart or closer in one series.
+  fastFlip: 60,      // a change of direction quicker than this is not a finger. Nobody has measured
+                     // how fast a person can reverse a wheel, so this is a judgement: encoder chatter
+                     // is specified at about 10 ms and arrives within a report or two.
+  backWindow: 450,   // slow stray, then the original direction again within this
+  cadence: 250,      // a roll is steady when its notches are no further apart than this
+  maxBurst: 2,       // more strays than this in a row is a real change of direction
+  speedWin: 250,     // window for the speed readouts
+  bands: [20, 40],   // notches per second: slow below the first, fast above the second. Microsoft
+                     // treats four notches about 27 ms apart (37 a second) as a fast roll.
+  targets: [20, 30, 30, 30],   // notches wanted per coverage cell: steps, slow, normal, fast
+  clickWin: 150,     // a wheel event this close to a wheel-button press "moved when clicked"
+  restMs: 10000,     // length of the hands-off check
+  maxEvents: 60000,
+  logRows: 250
+};
+const UNIT = ['px', 'lines', 'pages'];
+const BAND = ['Steps', 'Slow', 'Normal', 'Fast'];
+const BAND_PHRASE = ['single notches', 'slow rolls', 'normal strokes', 'fast flicks'];
+
+// What an event turned out to be. People scroll in finger strokes (roll, lift, roll),
+// so a wrong-way event is judged by where it falls in a stroke.
+const OK = 0;
+const MID = 1;     // against the roll in the middle of a stroke, flipped faster than a finger can
+const END = 2;     // straight after the last notch of a stroke, then a pause
+const START = 3;   // straight before a stroke gets going
+const BACK = 4;    // slowly, in the pause between two strokes: could be the returning finger
+const GHOST = 5;   // arrived during the hands-off check
+const FLAG = ['', 'reversed', 'bounce-back', 'false start', 'back-step', 'untouched'];
+const certain = (f) => f === MID || f === END || f === START || f === GHOST;
+
+const S = {
+  ev: [],            // {t, gap, tape, brk, dy, abs, mode, dir(+1 up/-1 down), n, pos, flag, click}
+  hist: new Map(),   // |delta| -> count, used to find the size of one notch
+  run: { dir: 0, len: 0, streak: 0, start: 0, tA: 0, gapA: Infinity },
+  blip: null,        // strays seen against the current roll, not yet judged
+  step: 0, stepped: true,
+  wdHist: new Map(), wdN: 0,                  // legacy wheelDelta sizes, where one notch is 120
+  model: 'delta', hires: false, perNotch: 1,  // how notches are counted (see analyse)
+  strokes: [],
+  paused: false, sample: false, full: false, zoom: 6,
+  clicks: 0, bounces: 0, tiltL: 0, tiltR: 0, lastMidUp: -1e9, midHeld: false, clickUntil: -1e9,
+  zero: 0,           // wheel events with no movement in them at all
+  dirty: true, statsDirty: true,
+  A: null
+};
+
+const IS_MAC = /mac/i.test((navigator.userAgentData && navigator.userAgentData.platform) || navigator.platform || '');
+
+// How many notches one event stands for. One event is not always one notch: fast rolling
+// can put several notches in one event, and a high-resolution wheel sends several events per notch.
+function notchesOf(abs, wd) {
+  if (S.model === 'ticks' && wd) return Math.max(1, Math.round(wd / 120));
+  if (S.model === 'delta' && S.stepped && S.step > 0) return Math.max(1, Math.round(abs / S.step));
+  return 1;
+}
+const mod = (a, n) => ((a % n) + n) % n;
+
+function median(a) {
+  if (!a.length) return 0;
+  const s = a.slice().sort((x, y) => x - y), m = s.length >> 1;
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+}
+
+function flagRange(a, b, f) {
+  for (let i = a; i <= b; i++) S.ev[i].flag = f;
+}
+
+// Record one vertical wheel event. `ghost` marks events that arrive during the hands-off
+// check; `wd` is the size of the event's legacy wheelDelta, when the browser gives one.
+function ingest(dy, mode, t, ghost, wd) {
+  const ev = S.ev;
+  if (ev.length >= CFG.maxEvents) { S.full = true; S.statsDirty = true; return; }
+  const prev = ev[ev.length - 1];
+  const gap = prev ? Math.max(0, t - prev.t) : -1;
+  if (prev && gap > CFG.settle) closeRun();
+  const abs = Math.round(Math.abs(dy) * 100) / 100;
+  S.hist.set(abs, (S.hist.get(abs) || 0) + 1);
+  wd = wd > 0 && Number.isFinite(wd) ? Math.round(wd) : 0;
+  if (wd) { S.wdHist.set(wd, (S.wdHist.get(wd) || 0) + 1); S.wdN++; }
+  const dir = dy < 0 ? 1 : -1, n = notchesOf(abs, wd);
+  ev.push({
+    t, gap, dy, abs, wd, mode, dir, n, flag: OK,
+    click: S.midHeld || t <= S.clickUntil,
+    tape: prev ? prev.tape + Math.min(gap, CFG.idleGap) : 0,
+    brk: gap > CFG.idleGap,
+    pos: (prev ? prev.pos : 0) + dir * n
+  });
+  if (ghost) { closeRun(); ev[ev.length - 1].flag = GHOST; }
+  else classify(ev.length - 1);
+  S.dirty = S.statsDirty = true;
+}
+
+// Decide whether event i continues the roll, strays against it, or starts a new one.
+function classify(i) {
+  const ev = S.ev, e = ev[i], run = S.run;
+  if (run.dir === 0) {
+    run.dir = e.dir; run.len = 1; run.streak = 1; run.start = i; run.tA = e.t; run.gapA = Infinity;
+    S.blip = null;
+    return;
+  }
+  const b = S.blip;
+  if (e.dir === run.dir) {
+    if (b) {
+      // Back in the original direction: judge the strays in between.
+      const sinceStray = e.t - ev[i - 1].t;
+      if (b.fast) flagRange(b.i0, i - 1, sinceStray <= CFG.strokeGap ? MID : END);
+      else if (sinceStray <= CFG.fastFlip) flagRange(b.i0, i - 1, START);
+      else if (b.steady && e.t - b.tA <= CFG.backWindow) flagRange(b.i0, i - 1, BACK);
+      S.blip = null;
+      run.streak = 0;
+    }
+    run.len++; run.streak++; run.gapA = e.t - run.tA; run.tA = e.t;
+    return;
+  }
+  if (!b) {
+    S.blip = {
+      i0: i, count: 1, tA: run.tA,
+      fast: e.gap >= 0 && e.gap <= CFG.fastFlip,
+      steady: run.streak >= 3 && run.gapA <= CFG.cadence   // three or more in a row, close together
+    };
+    return;
+  }
+  b.count++;
+  if (b.count > CFG.maxBurst) {
+    // The other direction kept going, so it is the real roll. If what came before was
+    // only a notch or two that flipped impossibly fast, that was a false start.
+    if (run.len <= CFG.maxBurst && b.fast) flagRange(run.start, b.i0 - 1, START);
+    S.run = { dir: e.dir, len: b.count, streak: b.count, start: b.i0, tA: e.t, gapA: e.gap };
+    S.blip = null;
+  }
+}
+
+// The wheel went quiet: judge any stray still pending, then forget the roll.
+function closeRun() {
+  const b = S.blip;
+  if (b && b.fast) flagRange(b.i0, b.i0 + b.count - 1, END);
+  S.blip = null;
+  S.run.dir = 0; S.run.len = 0; S.run.streak = 0;
+}
+
+// Recompute notch counts and positions after the notch size estimate changed.
+function reflow() {
+  let pos = 0;
+  for (const e of S.ev) { e.n = notchesOf(e.abs, e.wd); pos += e.dir * e.n; e.pos = pos; }
+  S.dirty = true;
+}
+
+// Full pass over the log: notch size, totals, strokes, coverage and the wheel map.
+function analyse() {
+  const ev = S.ev, N = ev.length;
+
+  // Notch size: a notched wheel reports a handful of delta values, all whole
+  // multiples of one step (fast rolling merges notches into 2x, 3x events).
+  // Smooth wheels, touchpads and accelerated scrolling report many unrelated values.
+  const keys = [...S.hist.keys()].sort((x, y) => x - y);
+  const lo = keys.length ? keys[0] : 0, hi = keys.length ? keys[keys.length - 1] : 0;
+  let step = 0, top = 0, stepped = true;
+  for (const k of keys) { const c = S.hist.get(k); if (c > top) { top = c; step = k; } }
+  if (N >= 8) {
+    stepped = false;
+    if (keys.length <= 8 || top / N >= 0.6) {
+      const need = Math.max(2, N * 0.03);
+      for (const k of keys) {
+        if (S.hist.get(k) < need) continue;
+        let fit = 0;
+        for (const [q, c] of S.hist) {
+          const r = q / k;
+          if (r > 0.9 && Math.abs(r - Math.round(r)) < 0.05) fit += c;
+        }
+        if (fit / N >= 0.85) { step = k; stepped = true; break; }
+      }
+    }
+  }
+  // A better measure where the browser offers it: in the legacy wheelDelta one notch is 120,
+  // whatever the scroll-lines setting or page zoom. Whole multiples of 120 mean notches can be
+  // counted straight from it. One steady fraction of 120 means a high-resolution wheel, which
+  // sends several events per notch: counts are then in events, and small back-steps are normal.
+  let model = 'delta', perNotch = 1;
+  if (N >= 8 && S.wdN / N >= 0.95) {
+    let whole = 0, sub = 0, topWd = 0, topC = 0;
+    for (const [k, c] of S.wdHist) {
+      if (k % 120 === 0) whole += c; else if (k < 120) sub += c;
+      if (c > topC) { topC = c; topWd = k; }
+    }
+    if (whole / S.wdN >= 0.85) { model = 'ticks'; stepped = true; }
+    else if (!IS_MAC && ev[N - 1].mode === 0 && sub / S.wdN >= 0.6 && topWd <= 60 && topC / S.wdN >= 0.4) {
+      model = 'hires'; stepped = true; perNotch = Math.max(2, Math.round(120 / topWd));
+    }
+  }
+  if (step !== S.step || stepped !== S.stepped || model !== S.model) {
+    S.step = step; S.stepped = stepped; S.model = model; S.hires = model === 'hires'; S.perNotch = perNotch;
+    reflow();
+  }
+
+  // Notches per turn, once the turn count has measured it; 24 until then.
+  const tr = CHK.turnRes, per = tr && tr.count > 0 ? tr.count / tr.turns : 0;
+  const turnKnown = per >= 6 && Math.abs(per - Math.round(per)) < 0.01;
+  const turnN = turnKnown ? Math.round(per) : 24;
+
+  // One pass: totals, fault counts, and the finger strokes with the faults that belong to them.
+  const f = [0, 0, 0, 0, 0, 0], strokes = [], marks = [];
+  let up = 0, down = 0, clickMoved = 0, peak = 0, w = 0, win = 0, cur = null, early = 0;
+  for (let i = 0; i < N; i++) {
+    const e = ev[i];
+    if (e.dir > 0) up += e.n; else down += e.n;
+    win += e.n;
+    while (ev[w].t < e.t - CFG.speedWin) { win -= ev[w].n; w++; }
+    if (i - w >= 3) { const r = win / (CFG.speedWin / 1000); if (r > peak) peak = r; }
+    if (e.flag) {
+      f[e.flag]++;
+      if (e.flag === GHOST) continue;
+      marks.push({ p: mod(e.pos, turnN), sure: certain(e.flag) });
+      if (e.flag === START || !cur) early++;        // a false start belongs to the stroke that follows
+      else if (e.flag === BACK) cur.maybe++;
+      else cur.bad++;
+      continue;
+    }
+    if (e.click) clickMoved++;
+    if (!cur || e.dir !== cur.dir || e.t - cur.t1 > CFG.strokeGap) {
+      cur = { dir: e.dir, i0: i, i1: i, t0: e.t, t1: e.t, n: 0, k: 0, first: e.n, bad: early, maybe: 0, band: 0 };
+      early = 0;
+      strokes.push(cur);
+    }
+    cur.i1 = i; cur.t1 = e.t; cur.n += e.n; cur.k++;
+  }
+
+  // Coverage: how much rolling each direction has had at each speed, and what went wrong there.
+  const cells = [[], []];
+  for (let d = 0; d < 2; d++) for (let b = 0; b < 4; b++) cells[d][b] = { n: 0, bad: 0, maybe: 0 };
+  const sN = [], sDur = [], sPause = [];
+  for (let j = 0; j < strokes.length; j++) {
+    const s = strokes[j], dur = s.t1 - s.t0;
+    const rate = s.k > 1 && dur > 0 ? (s.n - s.first) / (dur / 1000) : 0;
+    s.band = s.k === 1 ? (s.n > 1 ? 3 : 0) : rate < CFG.bands[0] ? 1 : rate <= CFG.bands[1] ? 2 : 3;
+    const c = cells[s.dir > 0 ? 1 : 0][s.band];
+    c.n += s.n; c.bad += s.bad; c.maybe += s.maybe;
+    if (s.k > 1 && j >= strokes.length - 300) {
+      sN.push(s.n); sDur.push(dur);
+      const p = strokes[j - 1];
+      if (p && p.dir === s.dir && s.t0 - p.t1 < 1000) sPause.push(s.t0 - p.t1);
+    }
+  }
+  let have = 0, want = 0;
+  const missing = [];
+  for (let d = 0; d < 2; d++) for (let b = 0; b < 4; b++) {
+    const t = CFG.targets[b];
+    want += t; have += Math.min(cells[d][b].n, t);
+    if (cells[d][b].n < t) missing.push(BAND_PHRASE[b] + (d ? ' up' : ' down'));
+  }
+
+  // Wheel map: do the faults keep landing on the same part of the rotation?
+  let cluster = null;
+  if (turnKnown && marks.length >= 6) {
+    const cnt = new Array(turnN).fill(0), width = Math.max(2, Math.round(turnN / 6));
+    for (const m of marks) cnt[m.p]++;
+    let best = 0, at = 0;
+    for (let p = 0; p < turnN; p++) {
+      let c = 0;
+      for (let q = 0; q < width; q++) c += cnt[(p + q) % turnN];
+      if (c > best) { best = c; at = p; }
+    }
+    if (best / marks.length >= 0.8) cluster = { at, width, hits: best, of: marks.length };
+  }
+
+  const sure = f[MID] + f[END] + f[START] + f[GHOST];
+  const countOff = CHK.countRes.filter((r) => r.got !== r.target).length;
+  S.strokes = strokes;
+  S.A = {
+    N, up, down, f, sure, clickMoved, countOff, maybe: f[BACK] + clickMoved + countOff,
+    peak, total: up + down, lo, hi, cells, coverage: want ? have / want : 0, missing,
+    strokeCount: sN.length, sN: median(sN), sDur: median(sDur), sPause: median(sPause),
+    turnN, turnKnown, marks: marks.slice(-240), cluster
+  };
+}
+
+// Notches per second over the last quarter second, for the live readout.
+function liveSpeed(now) {
+  const ev = S.ev;
+  let n = 0;
+  for (let i = ev.length - 1; i >= 0 && ev[i].t > now - CFG.speedWin; i--) n += ev[i].n;
+  return n / (CFG.speedWin / 1000);
+}
+// ---------- tape ----------
+const cv = $('chart'), ctx = cv.getContext('2d');
+const dialCv = $('dial'), dctx = dialCv.getContext('2d');
+const DIAL = 124;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+const C = {};
+let W = 1, H = 1, DPR = 1;
+const view = { lo: -6, hi: 6, snap: true };
+
+function readTheme() {
+  const cs = getComputedStyle(document.documentElement);
+  for (const k of ['grid', 'grid-strong', 'well', 'fg', 'muted', 'up', 'down', 'glitch', 'glitch-soft', 'accent']) C[k] = cs.getPropertyValue('--' + k).trim();
+  C.font = cs.getPropertyValue('--font-data').trim();
+  S.dirty = true;
+}
+
+function resize() {
+  const r = cv.getBoundingClientRect();
+  DPR = Math.min(window.devicePixelRatio || 1, 3);
+  W = Math.max(1, r.width); H = Math.max(1, r.height);
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  dialCv.width = dialCv.height = Math.round(DIAL * DPR);
+  S.dirty = true;
+}
+
+function niceStep(x) {
+  if (!(x > 1)) return 1;
+  const p = Math.pow(10, Math.floor(Math.log10(x))), f = x / p;
+  return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p;
+}
+
+const pauseText = (ms) => (ms < 10000 ? (ms / 1000).toFixed(1) : Math.round(ms / 1000)) + ' S PAUSE';
+
+// Where the right-hand edge of the tape is, in tape time. The tape only runs
+// while the wheel is moving, so long pauses take up a fixed short stretch.
+function tapeNowAt(now) {
+  const last = S.ev[S.ev.length - 1];
+  if (!last) return 0;
+  if (S.sample) return last.tape + 400;
+  return last.tape + Math.min(Math.max(0, now - last.t), CFG.idleGap);
+}
+
+function draw(now) {
+  const ev = S.ev, N = ev.length;
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+
+  // geometry: events lane on top, position lane below, a labelled band between
+  const x0 = 54, x1 = W - 22, pw = Math.max(10, x1 - x0);
+  const top = 48, bottom = H - 32, band = 38;
+  const hA = Math.round((bottom - top - band) * 0.5);
+  const yA0 = top, yA1 = top + hA, yMid = Math.round((yA0 + yA1) / 2) + 0.5;
+  const yB0 = yA1 + band, yB1 = bottom, hB = Math.max(10, yB1 - yB0);
+  const span = S.zoom * 1000, k = pw / span;
+  const tapeNow = tapeNowAt(now);
+  const X = (e) => x1 - (tapeNow - e.tape) * k;
+
+  // first event still on the tape
+  let a = 0, z = N;
+  const tMin = tapeNow - span;
+  while (a < z) { const m = (a + z) >> 1; if (ev[m].tape < tMin) a = m + 1; else z = m; }
+  const i0 = a;
+
+  // position range follows the visible trace
+  const base = i0 > 0 ? ev[i0 - 1].pos : 0;
+  let pmin = base, pmax = base, maxN = 2;
+  for (let i = i0; i < N; i++) {
+    const e = ev[i];
+    if (e.pos < pmin) pmin = e.pos;
+    if (e.pos > pmax) pmax = e.pos;
+    if (e.n > maxN) maxN = e.n;
+  }
+  const half = Math.max(6, (pmax - pmin) / 2 * 1.12 + 1);
+  const tLo = (pmin + pmax) / 2 - half, tHi = (pmin + pmax) / 2 + half;
+  if (view.snap || reduceMotion.matches) { view.lo = tLo; view.hi = tHi; view.snap = false; }
+  else {
+    view.lo += (tLo - view.lo) * 0.18;
+    view.hi += (tHi - view.hi) * 0.18;
+    if (Math.abs(tLo - view.lo) + Math.abs(tHi - view.hi) > 0.02) S.dirty = true;
+    else { view.lo = tLo; view.hi = tHi; }
+  }
+  const Y = (p) => yB1 - (p - view.lo) / (view.hi - view.lo) * hB;
+
+  // time ruler, fixed to the frame: the trace moves, the ruler does not
+  const minor = S.zoom <= 3 ? 250 : S.zoom <= 6 ? 500 : S.zoom <= 12 ? 1000 : 2500;
+  const major = S.zoom <= 3 ? 500 : S.zoom <= 6 ? 1000 : S.zoom <= 12 ? 2000 : 5000;
+  ctx.lineWidth = 1;
+  ctx.font = '400 10px ' + C.font;
+  if ('letterSpacing' in ctx) ctx.letterSpacing = '1px';
+  ctx.textBaseline = 'middle';
+  ctx.strokeStyle = C.grid;
+  ctx.beginPath();
+  for (let ms = minor; ms <= span + 1; ms += minor) {
+    const x = Math.round(x1 - ms * k) + 0.5;
+    ctx.moveTo(x, yA0); ctx.lineTo(x, yA1);
+    ctx.moveTo(x, yB0); ctx.lineTo(x, yB1);
+  }
+  ctx.stroke();
+  ctx.fillStyle = C.muted;
+  for (let ms = 0; ms <= span + 1; ms += major) {
+    ctx.textAlign = ms === 0 ? 'right' : 'center';
+    ctx.fillText(ms === 0 ? 'NOW' : '−' + ms / 1000 + ' S', x1 - ms * k, bottom + 16);
+  }
+
+  // position grid and its scale
+  const st = niceStep((view.hi - view.lo) / 4);
+  ctx.textAlign = 'right';
+  for (let v = Math.ceil(view.lo / st) * st; v <= view.hi; v += st) {
+    const y = Math.round(Y(v)) + 0.5;
+    ctx.strokeStyle = v === 0 ? C['grid-strong'] : C.grid;
+    ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x1, y); ctx.stroke();
+    ctx.fillText((v > 0 ? '+' : v < 0 ? '−' : '') + Math.abs(v), x0 - 8, y);
+  }
+
+  // events baseline and the "now" edge
+  ctx.strokeStyle = C['grid-strong'];
+  ctx.beginPath();
+  ctx.moveTo(x0, yMid); ctx.lineTo(x1, yMid);
+  ctx.moveTo(Math.round(x1) + 0.5, yA0); ctx.lineTo(Math.round(x1) + 0.5, yA1);
+  ctx.moveTo(Math.round(x1) + 0.5, yB0); ctx.lineTo(Math.round(x1) + 0.5, yB1);
+  ctx.stroke();
+
+  ctx.save();
+  ctx.beginPath(); ctx.rect(x0, 0, pw + 1, H); ctx.clip();
+
+  // events lane: one bar per event, up above the line and down below it
+  const unit = (hA / 2 - 6) / maxN;
+  const bw = Math.max(1.5, Math.min(4, k * 10));
+  const pu = new Path2D(), pd = new Path2D(), pg = new Path2D(), ps = new Path2D();
+  const halo = new Path2D(), mark = new Path2D(), markS = new Path2D(), brk = new Path2D();
+  const pauses = [];
+  let lastLabel = -1e9;
+  for (let i = i0; i < N; i++) {
+    const e = ev[i], x = X(e), h = e.n * unit, y = e.dir > 0 ? yMid - h : yMid;
+    if (e.brk) {
+      const xb = Math.round(x - CFG.idleGap * k / 2) + 0.5;
+      brk.moveTo(xb, yA0); brk.lineTo(xb, yB1);
+      if (xb - lastLabel > 84) { pauses.push(xb, e.gap); lastLabel = xb; }
+    }
+    if (e.flag) {
+      const tri = certain(e.flag) ? mark : markS;
+      tri.moveTo(x - 5, yA0 - 9); tri.lineTo(x + 5, yA0 - 9); tri.lineTo(x, yA0 - 1); tri.closePath();
+      if (certain(e.flag)) { halo.rect(x - 6, yA0, 12, yB1 - yA0); pg.rect(x - bw / 2 - 0.75, y, bw + 1.5, h); }
+      else ps.rect(x - bw / 2 - 0.75, y, bw + 1.5, h);
+    } else {
+      (e.dir > 0 ? pu : pd).rect(x - bw / 2, y, bw, h);
+    }
+  }
+  ctx.fillStyle = C['glitch-soft']; ctx.fill(halo);
+  ctx.strokeStyle = C['grid-strong'];
+  ctx.setLineDash([3, 4]); ctx.stroke(brk); ctx.setLineDash([]);
+  ctx.fillStyle = C.up; ctx.fill(pu);
+  ctx.fillStyle = C.down; ctx.fill(pd);
+  ctx.fillStyle = C.glitch; ctx.fill(pg); ctx.fill(mark);
+  ctx.globalAlpha = 0.5; ctx.fill(ps); ctx.globalAlpha = 1;
+  ctx.strokeStyle = C.glitch; ctx.lineWidth = 1.5; ctx.stroke(markS); ctx.lineWidth = 1;
+  ctx.fillStyle = C.muted; ctx.textAlign = 'center';
+  for (let i = 0; i < pauses.length; i += 2) ctx.fillText(pauseText(pauses[i + 1]), pauses[i], yA1 + 10);
+
+  // finger strokes: a solid run along the baseline, with the notch count on the empty side
+  const su = new Path2D(), sd = new Path2D();
+  for (let j = S.strokes.length - 1; j >= 0; j--) {
+    const s = S.strokes[j];
+    if (s.i1 < i0) break;
+    if (s.k < 2 || s.i1 >= N) continue;
+    const xa = X(ev[s.i0]), xb = X(ev[s.i1]);
+    (s.dir > 0 ? su : sd).rect(xa - bw / 2, yMid - 1.5, xb - xa + bw, 3);
+    if (xb - xa >= 14) {
+      ctx.fillStyle = s.dir > 0 ? C.up : C.down;
+      ctx.fillText(String(s.n), (xa + xb) / 2, s.dir > 0 ? yMid + 11 : yMid - 11);
+    }
+  }
+  ctx.fillStyle = C.up; ctx.fill(su);
+  ctx.fillStyle = C.down; ctx.fill(sd);
+
+  // position lane: net notches as a step line, coloured by the event that moved it
+  const lu = new Path2D(), ld = new Path2D(), lg = new Path2D(), ln = new Path2D();
+  const pathOf = (e) => (e.flag ? lg : e.dir > 0 ? lu : ld);
+  let px = x0, py = Y(base), pp = i0 > 0 ? pathOf(ev[i0 - 1]) : ln;
+  for (let i = i0; i < N; i++) {
+    const e = ev[i], x = X(e), y = Y(e.pos), p = pathOf(e);
+    pp.moveTo(px, py); pp.lineTo(x, py);
+    p.moveTo(x, py); p.lineTo(x, y);
+    px = x; py = y; pp = p;
+  }
+  pp.moveTo(px, py); pp.lineTo(x1, py);
+  ctx.lineCap = 'square';
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = C.muted; ctx.stroke(ln);
+  ctx.strokeStyle = C.up; ctx.stroke(lu);
+  ctx.strokeStyle = C.down; ctx.stroke(ld);
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = C.glitch; ctx.stroke(lg);
+  ctx.lineCap = 'butt';
+
+  // a check in progress, or the last one: a bracket over the stretch it covered
+  if (CHK.tape0 >= 0) {
+    const xa = x1 - (tapeNow - CHK.tape0) * k;
+    const xb = CHK.tape1 >= 0 ? x1 - (tapeNow - CHK.tape1) * k : x1;
+    if (xb > x0) {
+      ctx.strokeStyle = C.accent; ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(xa, yA0 + 11); ctx.lineTo(xa, yA0 + 4); ctx.lineTo(xb, yA0 + 4); ctx.lineTo(xb, yA0 + 11);
+      ctx.stroke();
+      ctx.fillStyle = C.accent; ctx.textAlign = 'left';
+      ctx.fillText(CHK.label.toUpperCase(), Math.max(xa, x0) + 6, yA0 + 18);
+    }
+  }
+  ctx.restore();
+
+  // lane labels
+  ctx.textAlign = 'left'; ctx.fillStyle = C.muted;
+  ctx.fillText('NET POSITION, NOTCHES', x0, yB0 - 10);
+  ctx.textAlign = 'right';
+  ctx.fillStyle = C.up; ctx.fillText('UP', x0 - 8, yMid - hA / 4);
+  ctx.fillStyle = C.down; ctx.fillText('DOWN', x0 - 8, yMid + hA / 4);
+
+  drawDial();
+}
+
+// Wheel map: one tick per notch of a full turn, a hand showing where the wheel is now,
+// and a dot wherever a fault happened. Dots piling up in one place mean one bad spot.
+function drawDial() {
+  const A = S.A;
+  if (!A) return;
+  const n = A.turnN, c = DIAL / 2, r = 38;
+  const ang = (p) => -(p / n) * Math.PI * 2 - Math.PI / 2;   // rolling down turns the hand clockwise
+  const at = (p, rr) => [c + Math.cos(ang(p)) * rr, c + Math.sin(ang(p)) * rr];
+  dctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  dctx.clearRect(0, 0, DIAL, DIAL);
+  if (A.cluster) {
+    dctx.strokeStyle = C['glitch-soft']; dctx.lineWidth = 20;
+    dctx.beginPath();
+    dctx.arc(c, c, r + 11, ang(A.cluster.at - 0.5), ang(A.cluster.at + A.cluster.width - 0.5), true);
+    dctx.stroke();
+  }
+  dctx.lineWidth = 1;
+  dctx.fillStyle = C.well; dctx.strokeStyle = C['grid-strong'];
+  dctx.beginPath(); dctx.arc(c, c, r, 0, Math.PI * 2); dctx.fill(); dctx.stroke();
+  dctx.strokeStyle = C.muted;
+  dctx.beginPath();
+  for (let p = 0, every = Math.ceil(n / 48); p < n; p += every) {   // thin the ticks on a high-resolution wheel
+    const [xa, ya] = at(p, p === 0 ? r - 9 : r - 5), [xb, yb] = at(p, r);
+    dctx.moveTo(xa, ya); dctx.lineTo(xb, yb);
+  }
+  dctx.stroke();
+  const seen = new Array(n).fill(0);
+  for (const m of A.marks) {
+    const [x, y] = at(m.p, r + 6 + Math.min(seen[m.p]++, 3) * 5);
+    dctx.beginPath(); dctx.arc(x, y, 2, 0, Math.PI * 2);
+    if (m.sure) { dctx.fillStyle = C.glitch; dctx.fill(); }
+    else { dctx.strokeStyle = C.glitch; dctx.stroke(); }
+  }
+  const last = S.ev[S.ev.length - 1], [hx, hy] = at(last ? mod(last.pos, n) : 0, r - 12);
+  dctx.strokeStyle = C.accent; dctx.lineWidth = 2; dctx.lineCap = 'round';
+  dctx.beginPath(); dctx.moveTo(c, c); dctx.lineTo(hx, hy); dctx.stroke();
+  dctx.fillStyle = C.accent;
+  dctx.beginPath(); dctx.arc(c, c, 3, 0, Math.PI * 2); dctx.fill();
+}
+// ---------- readouts ----------
+const fmt = (n) => n.toLocaleString('en-US');
+const trim = (n) => String(Math.round(n * 100) / 100);
+const plural = (n, one, many) => fmt(n) + ' ' + (n === 1 ? one : many);
+const setText = (id, s) => { const el = $(id); if (el.textContent !== s) el.textContent = s; };
+const setClass = (id, c) => { const el = $(id); if (el.className !== c) el.className = c; };
+const setTitle = (id, s) => { const el = $(id); if (el.title !== s) el.title = s; };
+
+// An annunciator lamp: dark at zero, lit red for a certain fault or amber for a suspect one.
+function lamp(id, n, kind) {
+  const el = $(id), lit = n ? kind : 'off', num = fmt(n);
+  if (el.dataset.lit !== lit) el.dataset.lit = lit;
+  if (el.lastElementChild.textContent !== num) el.lastElementChild.textContent = num;
+}
+
+// coverage cells: four speeds for each direction
+const CELL_TIP = [
+  'Single notches with a pause between them',
+  'Rolls slower than ' + CFG.bands[0] + ' notches a second',
+  'Rolls of ' + CFG.bands[0] + ' to ' + CFG.bands[1] + ' notches a second',
+  'Flicks faster than ' + CFG.bands[1] + ' notches a second'
+];
+const CELLS = [[], []];
+for (let d = 0; d < 2; d++) for (let b = 0; b < 4; b++) {
+  const el = document.createElement('div');
+  el.className = 'cell'; el.dataset.state = 'none'; el.title = CELL_TIP[b];
+  el.innerHTML = '<span class="cell-top"><span class="cell-name">' + BAND[b] + '</span><span class="cell-val"></span></span><i class="cell-bar"><b></b></i>';
+  $('cover-' + d).appendChild(el);
+  CELLS[d][b] = { el, val: el.querySelector('.cell-val'), bar: el.querySelector('b') };
+}
+
+function renderCoverage(a) {
+  for (let d = 0; d < 2; d++) for (let b = 0; b < 4; b++) {
+    const c = a.cells[d][b], t = CFG.targets[b], ui = CELLS[d][b];
+    const state = c.bad ? 'bad' : c.n >= t ? 'ok' : c.n ? 'part' : 'none';
+    const val = c.bad ? c.bad + ' in ' + fmt(c.n) : c.n >= t ? fmt(c.n) : c.n + '/' + t;
+    if (ui.el.dataset.state !== state) ui.el.dataset.state = state;
+    if (ui.val.textContent !== val) ui.val.textContent = val;
+    ui.bar.style.width = Math.round(Math.min(1, c.n / t) * 100) + '%';
+  }
+}
+
+function faultText(f) {
+  const parts = [];
+  if (f[MID]) parts.push(plural(f[MID], 'reversal', 'reversals') + ' mid-roll');
+  if (f[END]) parts.push(plural(f[END], 'bounce-back', 'bounce-backs'));
+  if (f[START]) parts.push(plural(f[START], 'false start', 'false starts'));
+  if (f[GHOST]) parts.push(plural(f[GHOST], 'event', 'events') + ' with hands off');
+  return parts.join(', ');
+}
+
+function renderStats(now) {
+  const a = S.A, f = a.f;
+  setText('s-up', fmt(a.up));
+  setText('s-down', fmt(a.down));
+  lamp('l-rev', f[MID], 'bad');
+  lamp('l-bounce', f[END], 'bad');
+  lamp('l-start', f[START], 'bad');
+  lamp('l-back', f[BACK], 'warn');
+  lamp('l-rest', f[GHOST], 'bad');
+  lamp('l-click', a.clickMoved, 'warn');
+  $('t-rate').classList.toggle('is-bad', a.sure > 0);
+  const rate = a.N ? a.sure / a.N * 100 : 0;
+  setText('s-rate', (rate === 0 ? '0' : rate < 0.1 ? '<0.1' : rate < 10 ? rate.toFixed(1) : rate.toFixed(0)) + '%');
+  setText('s-rate-sub', a.sure ? '1 in ' + fmt(Math.round(a.N / a.sure)) : 'of events');
+  if (a.strokeCount >= 3) {
+    setText('s-stroke', trim(a.sN));
+    setText('s-stroke-sub', 'in ' + Math.round(a.sDur) + ' ms');
+    setTitle('t-stroke', 'Your typical finger stroke: ' + trim(a.sN) + ' notches in ' + Math.round(a.sDur) + ' ms, then ' + Math.round(a.sPause) + ' ms before the next');
+  } else {
+    setText('s-stroke', '–');
+    setText('s-stroke-sub', 'per stroke');
+    setTitle('t-stroke', 'Notches in one finger stroke');
+  }
+  const unit = a.N ? UNIT[S.ev[a.N - 1].mode] || 'px' : 'px';
+  if (!a.N) { setText('s-step', '–'); setText('s-step-sub', 'per notch'); }
+  else if (S.hires) { setText('s-step', '1/' + S.perNotch); setText('s-step-sub', 'notch/event'); }
+  else if (S.stepped) { setText('s-step', trim(S.step)); setText('s-step-sub', unit + '/notch'); }
+  else { setText('s-step', 'varies'); setText('s-step-sub', trim(a.lo) + '–' + trim(a.hi) + ' ' + unit); }
+  setText('live', (S.sample ? 0 : Math.round(liveSpeed(now))) + ' notches/s');
+
+  setText('w-turn', a.turnN + ' notches');
+  setText('w-turn-sub', a.cluster ? a.cluster.hits + ' of ' + a.cluster.of + ' at one spot'
+    : a.turnKnown ? 'per turn, measured' : 'per turn, assumed');
+  setClass('w-turn-sub', a.cluster ? 'is-bad' : '');
+  setText('x-click', fmt(S.clicks));
+  setText('x-click-sub', plural(S.bounces, 'double-fire', 'double-fires') + (a.clickMoved ? ', ' + a.clickMoved + ' moved the wheel' : ''));
+  setClass('x-click-sub', S.bounces ? 'is-bad' : '');
+  setText('x-tilt', S.tiltL + ' / ' + S.tiltR);
+
+  let level = 'idle', title, detail;
+  if (S.sample) {
+    title = 'Example';
+    detail = 'A sample recording with three kinds of fault in it. Roll your wheel to test your own.';
+  } else if (CHK.active && !a.sure) {
+    title = CHK.label;
+    detail = CHK.active === 'rest' ? 'Keep your finger off the wheel.' : 'Roll slowly, then press Enter.';
+  } else if (!a.N) {
+    title = 'Ready';
+    detail = 'Roll the wheel the way you normally scroll.';
+  } else if (a.sure) {
+    level = a.sure >= 3 ? 'crit' : 'warn';
+    title = a.sure >= 3 ? 'Faulty wheel' : 'Suspect';
+    detail = faultText(f) + ' in ' + fmt(a.N) + ' events.';
+    let worst = null, attributed = 0;
+    for (let d = 0; d < 2; d++) for (let b = 0; b < 4; b++) {
+      const c = a.cells[d][b];
+      attributed += c.bad;
+      if (c.bad && (!worst || c.bad > worst.bad)) worst = { bad: c.bad, name: BAND_PHRASE[b] + ', going ' + (d ? 'up' : 'down') };
+    }
+    if (worst && worst.bad >= 2 && worst.bad / attributed >= 0.6) detail += ' Mostly ' + worst.name + '.';
+  } else if (a.maybe >= 3) {
+    level = 'warn';
+    title = 'Check your technique';
+    const parts = [];
+    if (f[BACK]) parts.push(plural(f[BACK], 'back-step', 'back-steps') + ' between strokes');
+    if (a.clickMoved) parts.push(plural(a.clickMoved, 'event', 'events') + ' as the wheel was clicked');
+    if (a.countOff) parts.push(plural(a.countOff, 'count', 'counts') + ' that came out wrong');
+    detail = 'No certain faults, but ' + parts.join(', ') + '. Lift your finger clear between strokes and see if they stop.';
+  } else if (a.coverage < 1) {
+    title = 'Clean so far';
+    const m = a.missing;
+    detail = 'No faults in ' + fmt(a.N) + ' events. Still to try: ' + m.slice(0, 3).join(', ') + (m.length > 3 ? ' and ' + (m.length - 3) + ' more' : '') + '.';
+  } else {
+    level = 'good';
+    title = 'Clean';
+    detail = 'No faults in ' + fmt(a.total) + ' notches, at every speed, both ways.';
+  }
+  if (!S.sample && S.hires) {
+    // A high-resolution wheel settles with small back-steps of its own, so wrong-way events prove nothing.
+    if (a.sure || a.maybe) {
+      level = 'warn';
+      title = 'High-resolution wheel';
+      detail = 'This wheel sends about ' + S.perNotch + ' events per notch, and small back-steps as it settles are normal, so the wrong-way events counted here prove nothing. Switch the mouse to standard notched scrolling in its software and test again.';
+    } else {
+      detail += ' High-resolution wheel: about ' + S.perNotch + ' events per notch, so the counts are events, not notches.';
+    }
+  } else if (!S.sample && !S.stepped && a.N >= 8) {
+    detail += ' Deltas vary, so this looks like a smooth wheel, touchpad or OS acceleration, and the fault counts mean less.';
+  }
+  if (S.full) detail = 'The log is full. Reset to keep recording.';
+  $('verdict').dataset.level = level;
+  setText('verdict-title', title);
+  setText('verdict-detail', detail);
+
+  $('hint').hidden = a.N > 0 || S.paused || !!CHK.active;
+  $('sample-flag').hidden = !S.sample || S.paused;
+  $('paused-flag').hidden = !S.paused;
+  renderCoverage(a);
+  renderChecks(now);
+}
+
+function renderChecks(now) {
+  const act = CHK.active;
+  $('check-idle').hidden = !!act;
+  $('check-run').hidden = !act;
+
+  const tr = CHK.turnRes;
+  if (!tr) { setText('res-turn', 'Not measured'); setClass('res-turn', 'check-res'); }
+  else {
+    const per = tr.count / tr.turns, whole = Number.isInteger(per);
+    let s = 'No notches arrived';
+    if (tr.count) {
+      s = tr.perNotch > 1
+        ? (whole ? fmt(per) : per.toFixed(1)) + ' events per turn, about ' + Math.round(per / tr.perNotch * 10) / 10 + ' notches at ' + tr.perNotch + ' events each'
+        : (whole ? fmt(per) : per.toFixed(1)) + ' per turn, ' + Math.round(3600 / per) / 10 + '° apart';
+      if (tr.turns > 1) s += ' (' + fmt(tr.count) + ' over ' + tr.turns + ' turns)';
+      if (!whole) s += '. Not a whole number, so a notch was missed or the turns are off';
+      if (tr.ignored) s += '. ' + plural(tr.ignored, 'stray', 'strays') + ' left out';
+      if (tr.smooth) s += '. Deltas vary, so these are events, not detents';
+    }
+    setText('res-turn', s);
+    setClass('res-turn', 'check-res ' + (tr.count && whole && !tr.ignored ? 'is-good' : 'is-warn'));
+  }
+  const cr = CHK.countRes.slice(-4);
+  if (!cr.length) { setText('res-count', 'Not run'); setClass('res-count', 'check-res'); }
+  else {
+    setText('res-count', cr.map((r) => (r.dir > 0 ? '▲ ' : '▼ ') + r.got + ' of ' + r.target).join(',  '));
+    setClass('res-count', 'check-res ' + (cr.some((r) => r.got !== r.target) ? 'is-bad' : 'is-good'));
+  }
+  const rr = CHK.restRes;
+  if (!rr) { setText('res-rest', 'Not run'); setClass('res-rest', 'check-res'); }
+  else {
+    setText('res-rest', rr.events ? plural(rr.events, 'event', 'events') + ' with the wheel untouched. If you touched it, reset and run it again'
+      : 'Quiet for ' + Math.round(rr.ms / 1000) + ' s');
+    setClass('res-rest', 'check-res ' + (rr.events ? 'is-bad' : 'is-good'));
+  }
+
+  if (act) {
+    const isTurn = act === 'turn', isRest = act === 'rest', v = isTurn ? CHK.turns : CHK.target;
+    setText('run-title', CHK.label);
+    $('run-stepper').hidden = isRest;
+    $('btn-run-done').hidden = isRest;
+    setText('step-name', isTurn ? 'Turns' : 'Notches');
+    setText('step-n', String(v));
+    $('step-less').disabled = v <= (isTurn ? 1 : 5);
+    $('step-more').disabled = v >= (isTurn ? 20 : 40);
+    if (isRest) {
+      const left = Math.ceil(Math.max(0, CFG.restMs - (now - CHK.t0)) / 1000);
+      setText('run-num', String(left));
+      setText('run-unit', 'seconds left' + (CHK.ghosts ? ', ' + plural(CHK.ghosts, 'event', 'events') + ' so far' : ''));
+      setText('run-note', 'Take your finger off the wheel. Slide the mouse about, lift it and set it down, press the other buttons. Anything the wheel reports now, it is doing by itself.');
+      setText('check-flag', 'Hands off: ' + left + ' s');
+    } else {
+      tally();
+      setText('run-num', fmt(CHK.count));
+      setText('run-unit', isTurn ? (CHK.count === 1 ? 'notch so far' : 'notches so far') : 'of ' + CHK.target);
+      setText('run-note', isTurn
+        ? 'Mark the wheel and line the mark up with the mouse body. Roll ' + (v === 1 ? 'one full turn' : v + ' full turns') + ' slowly until the mark is back, then press Enter.'
+        : 'Roll exactly ' + v + ' notches one way, slowly, counting the clicks you feel. Then press Enter.');
+      setText('check-flag', CHK.label + ': ' + fmt(CHK.count));
+    }
+  }
+  $('check-flag').hidden = !act || S.paused;
+}
+
+function renderLog() {
+  const ev = S.ev, N = ev.length, from = Math.max(0, N - CFG.logRows), t0 = N ? ev[0].t : 0;
+  let h = '';
+  for (let i = N - 1; i >= from; i--) {
+    const e = ev[i];
+    const cls = certain(e.flag) ? 'bad' : e.flag ? 'maybe' : e.dir > 0 ? 'up' : 'down';
+    h += '<tr class="' + cls + '"><td>' + (i + 1) +
+      '</td><td>' + ((e.t - t0) / 1000).toFixed(3) +
+      '</td><td>' + (e.gap < 0 ? '' : e.gap < 1000 ? e.gap.toFixed(1) : fmt(Math.round(e.gap))) +
+      '</td><td class="dir" title="delta ' + (e.dy > 0 ? '+' : '−') + trim(e.abs) + '">' + (e.dir > 0 ? '▲ ' : '▼ ') +
+      (FLAG[e.flag] || (e.dir > 0 ? 'up' : 'down')) + (e.n > 1 ? ' ×' + e.n : '') + (e.click && !e.flag ? ' click' : '') + '</td></tr>';
+  }
+  $('log-body').innerHTML = h;
+  $('log-empty').hidden = N > 0;
+  setText('log-count', N > CFG.logRows ? 'last ' + CFG.logRows + ' of ' + fmt(N) : N ? plural(N, 'event', 'events') : '');
+}
+
+function toCsv() {
+  const ev = S.ev, t0 = ev.length ? ev[0].t : 0;
+  const rows = ['event,time_ms,gap_ms,delta_y,delta_unit,direction,notches,net_position,result,on_wheel_click'];
+  ev.forEach((e, i) => rows.push([
+    i + 1, (e.t - t0).toFixed(1), e.gap < 0 ? '' : e.gap.toFixed(1), e.dy, UNIT[e.mode] || 'px',
+    e.dir > 0 ? 'up' : 'down', e.n, e.pos, FLAG[e.flag] || 'ok', e.click ? 1 : 0
+  ].join(',')));
+  return rows.join('\n');
+}
+
+// A plain-text summary to paste into a support ticket, a return request or a forum post.
+function toReport() {
+  const a = S.A, f = a.f, L = [], d = new Date(), p2 = (n) => String(n).padStart(2, '0');
+  L.push('Scroll Wheel Tester report, ' + d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()) + ' ' + p2(d.getHours()) + ':' + p2(d.getMinutes()));
+  L.push('Browser: ' + navigator.userAgent);
+  L.push('Verdict: ' + $('verdict-title').textContent + '. ' + $('verdict-detail').textContent);
+  L.push('Rolled: ' + fmt(a.down) + ' notches down and ' + fmt(a.up) + ' up, in ' + fmt(a.N) + ' events' +
+    (a.strokeCount >= 3 ? '. Typical stroke: ' + trim(a.sN) + ' notches in ' + Math.round(a.sDur) + ' ms, ' + Math.round(a.sPause) + ' ms between strokes' : ''));
+  const unit = a.N ? UNIT[S.ev[a.N - 1].mode] || 'px' : 'px';
+  L.push('Notch size: ' + (!a.N ? 'not seen yet' : S.hires ? '1/' + S.perNotch + ' notch per event (high-resolution wheel)'
+    : S.stepped ? trim(S.step) + ' ' + unit + ' per notch' : 'varies, ' + trim(a.lo) + ' to ' + trim(a.hi) + ' ' + unit) + '. Peak speed: ' + Math.round(a.peak) + ' notches a second');
+  L.push('Certain faults: ' + f[MID] + ' reversed mid-roll, ' + f[END] + ' bounce-backs as a stroke ended, ' + f[START] + ' false starts, ' + f[GHOST] + ' with hands off');
+  L.push('Suspect: ' + plural(f[BACK], 'back-step', 'back-steps') + ' between strokes, ' + plural(a.clickMoved, 'event', 'events') + ' as the wheel was clicked');
+  if (S.zero) L.push('Empty events: ' + S.zero + ' with no movement in them, which can be a notch and its opposite added together by the browser');
+  L.push('Coverage, notches tested at each speed (faults in brackets):');
+  for (let dir = 0; dir < 2; dir++) {
+    L.push('  ' + (dir ? 'Up:   ' : 'Down: ') + a.cells[dir].map((c, b) => BAND[b].toLowerCase() + ' ' + c.n + (c.bad ? ' (' + c.bad + ')' : '')).join(', '));
+  }
+  L.push('Notches per turn: ' + $('res-turn').textContent);
+  L.push('Counted notches: ' + (CHK.countRes.length ? CHK.countRes.map((r) => (r.dir > 0 ? 'up ' : 'down ') + r.got + ' of ' + r.target).join(', ') : 'not run'));
+  L.push('Hands off: ' + $('res-rest').textContent);
+  L.push('Wheel button: ' + plural(S.clicks, 'click', 'clicks') + ', ' + plural(S.bounces, 'double-fire', 'double-fires'));
+  if (a.cluster) L.push('Wheel map: ' + a.cluster.hits + ' of ' + a.cluster.of + ' faults fall within ' + a.cluster.width + ' notches of each other on the wheel');
+  return L.join('\n');
+}
+
+function copyText(text, btn) {
+  const label = btn.textContent;
+  const done = () => { btn.textContent = 'Copied'; setTimeout(() => { btn.textContent = label; }, 1400); };
+  const fallback = () => { $('csv-text').value = text; $('csv-dialog').showModal(); $('csv-text').select(); };
+  try { navigator.clipboard.writeText(text).then(done, fallback); } catch (err) { fallback(); }
+}
+// ---------- checks ----------
+// Three things the event stream cannot show by itself, so the person takes part:
+//  turn:  mark the wheel, roll whole turns, and the count per turn falls out
+//  count: roll a known number of notches by feel, and see whether the wheel reported that many
+//  rest:  take the finger off, and anything the wheel reports is the wheel moving by itself
+const CHK = {
+  active: null, label: '', from: 0, t0: 0, count: 0, dir: -1, ignored: 0, ghosts: 0, timer: 0,
+  turns: 1, target: 10, tape0: -1, tape1: -1,
+  turnRes: null, countRes: [], restRes: null
+};
+const CHECK_NAME = { turn: 'Notches per turn', count: 'Counted notches', rest: 'Hands off' };
+
+// Net notches since the check began. Rolling back subtracts, so overshooting and
+// correcting is fine. Strays are faults, not movement: left out and reported.
+function tally() {
+  let net = 0, ignored = 0;
+  for (let i = CHK.from; i < S.ev.length; i++) {
+    const e = S.ev[i];
+    if (e.flag) ignored++; else net += e.dir * e.n;
+  }
+  CHK.count = Math.abs(net);
+  CHK.dir = net > 0 ? 1 : -1;
+  CHK.ignored = ignored;
+}
+
+function startCheck(kind) {
+  if (CHK.active) return;
+  if (S.sample) reset();
+  if (S.paused) setPaused(false);
+  closeRun();
+  const now = performance.now();
+  CHK.active = kind; CHK.label = CHECK_NAME[kind];
+  CHK.from = S.ev.length; CHK.t0 = now; CHK.count = 0; CHK.ignored = 0; CHK.ghosts = 0;
+  CHK.tape0 = tapeNowAt(now); CHK.tape1 = -1;
+  if (kind === 'rest') CHK.timer = setTimeout(finishCheck, CFG.restMs);
+  S.dirty = S.statsDirty = true;
+}
+
+function finishCheck() {
+  const kind = CHK.active;
+  if (!kind) return;
+  clearTimeout(CHK.timer);
+  closeRun();
+  analyse();
+  const now = performance.now();
+  if (kind === 'rest') {
+    CHK.restRes = { ms: Math.min(CFG.restMs, now - CHK.t0), events: CHK.ghosts };
+  } else {
+    tally();
+    if (kind === 'turn') {
+      CHK.turnRes = {
+        count: CHK.count, turns: CHK.turns, ignored: CHK.ignored,
+        smooth: !S.stepped && S.ev.length - CHK.from >= 8, perNotch: S.hires ? S.perNotch : 1
+      };
+    } else {
+      CHK.countRes.push({ target: CHK.target, got: CHK.count, dir: CHK.dir, ignored: CHK.ignored });
+      if (CHK.countRes.length > 12) CHK.countRes.shift();
+    }
+  }
+  CHK.active = null; CHK.tape1 = tapeNowAt(now);
+  S.dirty = S.statsDirty = true;
+}
+
+function cancelCheck() {
+  if (!CHK.active) return;
+  clearTimeout(CHK.timer);
+  CHK.active = null; CHK.tape0 = CHK.tape1 = -1;
+  S.dirty = S.statsDirty = true;
+}
+
+const toggleCheck = (kind) => {
+  if (!CHK.active) startCheck(kind);
+  else if (CHK.active === kind && kind !== 'rest') finishCheck();
+};
+
+function stepBy(d) {
+  if (CHK.active === 'turn') CHK.turns = Math.max(1, Math.min(20, CHK.turns + d));
+  else if (CHK.active === 'count') CHK.target = Math.max(5, Math.min(40, CHK.target + d));
+  S.statsDirty = true;
+}
+
+// ---------- controls ----------
+function setPaused(p) {
+  S.paused = p;
+  $('btn-pause').setAttribute('aria-pressed', String(p));
+  setText('btn-pause-text', p ? 'Resume' : 'Pause');
+  S.statsDirty = true;
+}
+
+// Clears the recording. The measured notches per turn is kept: it belongs to the wheel, not the run.
+function reset() {
+  S.ev = []; S.hist = new Map(); S.strokes = []; S.blip = null;
+  S.wdHist = new Map(); S.wdN = 0; S.model = 'delta'; S.hires = false; S.perNotch = 1;
+  S.run = { dir: 0, len: 0, streak: 0, start: 0, tA: 0, gapA: Infinity };
+  S.step = 0; S.stepped = true; S.sample = false; S.full = false;
+  S.clicks = S.bounces = S.tiltL = S.tiltR = S.zero = 0;
+  view.snap = true;
+  clearTimeout(CHK.timer);
+  CHK.active = null; CHK.tape0 = CHK.tape1 = -1; CHK.countRes = []; CHK.restRes = null;
+  if (S.paused) setPaused(false);
+  S.dirty = S.statsDirty = true;
+}
+
+function toggleFull() {
+  const el = document.documentElement;
+  const p = document.fullscreenElement ? document.exitFullscreen() : el.requestFullscreen && el.requestFullscreen();
+  if (p && p.catch) p.catch(() => {});
+}
+
+const press = (id, fn) => $(id).addEventListener('click', (e) => {
+  fn(e.currentTarget);
+  if (e.detail > 0) e.currentTarget.blur();   // mouse click: hand Space and Enter back to the page
+});
+press('btn-pause', () => setPaused(!S.paused));
+press('btn-reset', reset);
+press('btn-full', toggleFull);
+press('btn-copy', (btn) => copyText(toCsv(), btn));
+press('btn-report', (btn) => { analyse(); renderStats(performance.now()); copyText(toReport(), btn); });
+press('btn-turn', () => startCheck('turn'));
+press('btn-count', () => startCheck('count'));
+press('btn-rest', () => startCheck('rest'));
+press('btn-run-done', finishCheck);
+press('btn-run-cancel', cancelCheck);
+press('step-less', () => stepBy(-1));
+press('step-more', () => stepBy(1));
+$('csv-close').addEventListener('click', () => $('csv-dialog').close());
+if (!document.documentElement.requestFullscreen) $('btn-full').hidden = true;
+document.addEventListener('fullscreenchange', () => $('btn-full').setAttribute('aria-pressed', String(!!document.fullscreenElement)));
+
+window.addEventListener('wheel', (e) => {
+  if (S.paused || $('csv-dialog').open) return;
+  e.preventDefault();
+  const mode = e.deltaMode, dy = e.deltaY, dx = e.deltaX;   // deltaMode first, so Firefox reports lines
+  if (S.sample) reset();
+  if (dy === 0) {
+    // No vertical movement: a sideways event, or an empty one. The browser hands over wheel
+    // events once per screen frame and adds up what arrived, so a notch and its opposite cancel.
+    if (dx < 0) S.tiltL++; else if (dx > 0) S.tiltR++; else S.zero++;
+    S.statsDirty = true;
+    return;
+  }
+  const now = performance.now(), ghost = CHK.active === 'rest';
+  if (ghost) CHK.ghosts++;
+  ingest(dy, mode, e.timeStamp > 0 && e.timeStamp <= now + 5 ? e.timeStamp : now, ghost, Math.abs(e.wheelDeltaY));
+}, { passive: false });
+
+window.addEventListener('mousedown', (e) => {
+  if (e.button !== 1 || S.paused) return;
+  e.preventDefault();                          // stops Windows autoscroll
+  if (S.sample) reset();
+  const t = e.timeStamp;
+  if (t - S.lastMidUp < 50) S.bounces++;
+  S.clicks++; S.midHeld = true;
+  // pressing the wheel should not turn it: mark anything it reported just before the press
+  for (let i = S.ev.length - 1; i >= 0 && t - S.ev[i].t <= CFG.clickWin; i--) S.ev[i].click = true;
+  $('x-held').classList.add('on');
+  S.statsDirty = true;
+});
+window.addEventListener('mouseup', (e) => {
+  if (e.button !== 1) return;
+  S.lastMidUp = e.timeStamp; S.midHeld = false; S.clickUntil = e.timeStamp + CFG.clickWin;
+  $('x-held').classList.remove('on');
+});
+window.addEventListener('auxclick', (e) => { if (e.button === 1 && !S.paused) e.preventDefault(); });
+
+window.addEventListener('keydown', (e) => {
+  if (e.ctrlKey || e.metaKey || e.altKey || $('csv-dialog').open) return;
+  const tag = e.target.tagName, k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+  if (tag === 'TEXTAREA') return;
+  if (e.code === 'Space' || k === 'Enter') {
+    if (tag === 'BUTTON' || tag === 'SUMMARY' || tag === 'A') return;   // these already act on Space and Enter
+    e.preventDefault();
+    if (CHK.active === 'turn' || CHK.active === 'count') finishCheck();
+    else if (e.code === 'Space' && !CHK.active) setPaused(!S.paused);
+  } else if (k === 'Escape') cancelCheck();
+  else if (k === 't') toggleCheck('turn');
+  else if (k === 'c') toggleCheck('count');
+  else if (k === 'h') toggleCheck('rest');
+  else if (k === 'r') reset();
+  else if (k === 'f') toggleFull();
+});
+
+try {
+  const z = localStorage.getItem('swt-span');
+  if (z && $('zoom-' + z)) $('zoom-' + z).checked = true;
+} catch (err) {}
+document.querySelectorAll('input[name="zoom"]').forEach((r) => {
+  if (r.checked) S.zoom = +r.value;
+  r.addEventListener('change', () => {
+    if (!r.checked) return;
+    S.zoom = +r.value; S.dirty = true;
+    try { localStorage.setItem('swt-span', r.value); } catch (err) {}
+  });
+});
+
+// ---------- example trace shown until the first real event ----------
+// Rolled the way a person does it: a few notches per finger stroke, a pause while the
+// finger comes back, then the next stroke. One fault of each main kind is planted in it.
+function loadSample() {
+  let t = 1000, seed = 11;
+  const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  const roll = (dy, dt) => { t += dt; ingest(dy, 0, t); };
+  const stroke = (dy, n, pause) => { for (let i = 0; i < n; i++) roll(dy, i ? 26 + rnd() * 10 : pause); };
+  stroke(100, 5, 0);
+  stroke(100, 4, 240);
+  stroke(100, 3, 250); roll(-100, 5); stroke(100, 3, 26);    // reversed in the middle of a stroke
+  stroke(100, 6, 235); roll(-100, 12);                         // bounce-back as the stroke ends
+  stroke(100, 4, 270);
+  t += 1300;
+  stroke(-100, 5, 0);
+  stroke(-100, 4, 225);
+  roll(100, 130); stroke(-100, 5, 160);                        // back-step while the finger returns
+  stroke(-100, 6, 245);
+  t += 900;
+  for (let i = 0; i < 3; i++) roll(100, i ? 380 + rnd() * 80 : 0);   // single notches
+  closeRun();
+  S.sample = true;
+}
+
+// ---------- frame loop ----------
+let lastUi = 0, logSig = '';
+function renderAll(now) {
+  analyse();
+  renderStats(now);
+  const sig = S.ev.length + ':' + S.A.sure + ':' + S.A.f[BACK] + ':' + S.A.clickMoved;
+  if (sig !== logSig) { logSig = sig; renderLog(); }
+}
+
+function frame() {
+  const now = performance.now(), last = S.ev[S.ev.length - 1];
+  if (last && !S.sample) {
+    const idle = now - last.t;
+    if ((S.run.dir || S.blip) && idle > CFG.settle) { closeRun(); S.dirty = S.statsDirty = true; }
+    if (idle < CFG.idleGap + 60) S.dirty = true;          // the tape is still moving
+    if (idle < CFG.speedWin + 300) S.statsDirty = true;   // let the speed readout fall to zero
+  }
+  if (CHK.active === 'rest') S.statsDirty = true;         // countdown
+  if (S.statsDirty && now - lastUi > 110) {
+    lastUi = now; S.statsDirty = false;
+    renderAll(now);
+    S.dirty = true;
+  }
+  if (S.dirty) { S.dirty = false; draw(now); }
+  requestAnimationFrame(frame);
+}
+
+readTheme();
+resize();
+new ResizeObserver(resize).observe(cv);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readTheme);
+new MutationObserver(readTheme).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { S.dirty = true; });
+loadSample();
+renderAll(performance.now());
+
+// Handle for poking at the tester from the console.
+window.scrollWheelTester = {
+  state: S, checks: CHK, config: CFG, ingest, closeRun, analyse, reset, startCheck, finishCheck, cancelCheck,
+  report: toReport, csv: toCsv,
+  renderNow: () => renderAll(performance.now())
+};
+requestAnimationFrame(frame);
+
+// Served from a website, keep a copy for offline use. Skipped when the page is opened
+// from disk or shown inside another page, where a service worker cannot run.
+if ('serviceWorker' in navigator && window.top === window && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+  navigator.serviceWorker.register('sw.js').catch(() => {});
+}
+})();
+</script>

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <title>Scroll Wheel Tester</title>
+  <rect width="512" height="512" rx="96" fill="#1a1b1d"/>
+  <circle cx="256" cy="256" r="150" fill="#141516" stroke="#3c4045" stroke-width="4"/>
+  <circle cx="256" cy="256" r="137" fill="none" stroke="#e9e5d9" stroke-width="22" stroke-dasharray="8 27.867" transform="rotate(-91.67 256 256)"/>
+  <path d="M256 256L329.5 182.5" stroke="#7cd6e8" stroke-width="14" stroke-linecap="round"/>
+  <circle cx="256" cy="256" r="16" fill="#7cd6e8"/>
+  <circle cx="418.8" cy="162" r="13" fill="#ff5a47"/>
+  <circle cx="437.6" cy="207.3" r="13" fill="#ff5a47"/>
+</svg>
