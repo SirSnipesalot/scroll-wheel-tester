@@ -15,7 +15,7 @@ Scroll wheels wear out. The usual signs:
 - in a game, you scroll to the next weapon and get the previous one
 - the wheel scrolls when you are not touching it
 
-Some mice have a reputation for it. Owners of the Razer DeathAdder V3 Pro, for example, [have reported](https://insider.razer.com/razer-support-45/deathadder-v3-pro-scroll-wheel-registers-the-wrong-direction-wired-and-wireless-92921) wheels that scroll the wrong way.
+Some mice have a reputation for it. The Razer DeathAdder V3 Pro is one: [this owner](https://insider.razer.com/razer-support-45/deathadder-v3-pro-scroll-wheel-registers-the-wrong-direction-wired-and-wireless-92921) logged its wheel sending 6 of 37 notches the wrong way.
 
 The tester records every signal your wheel sends while you roll it and counts the ones that should not be there. Use it to find out whether the wheel really is faulty **before** you file a warranty claim or order a replacement encoder (the part behind the wheel) to solder in. When you are done, it gives you a text report you can paste into the claim.
 
