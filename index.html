@@ -121,22 +121,25 @@ kbd { font: 400 10px/1 var(--font-data); letter-spacing: 0; text-transform: uppe
 .tile.is-bad dd span { color: var(--glitch) }
 
 /* ---- roll tests: every speed and direction the wheel has to be tried at ---- */
-.cover { display: grid; grid-template-columns: 112px minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: center; padding: 10px 16px }
+.cover { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 20px; align-items: center; padding: 11px 16px 12px }
 .cover-head small { display: block; margin-top: 5px; font: 400 10px/1 var(--font-data); letter-spacing: 0; color: var(--muted); white-space: nowrap }
-.cover-group { display: grid; grid-template-columns: 48px repeat(4, minmax(0, 1fr)); gap: 10px; align-items: center }
+/* one grid at every window size: a heading per way of rolling, then a row for down and a row for up */
+.cover-grid { display: grid; grid-template-columns: 48px repeat(4, minmax(0, 1fr)); gap: 9px 28px; align-items: center }
+.cover-group { display: contents }
+.cover-col { min-width: 0; display: flex; align-items: baseline; gap: 12px; white-space: nowrap; overflow: hidden }
+.cover-col b { font: 600 15px/1.15 var(--font-face); letter-spacing: .14em; text-transform: uppercase }
+.cover-col small { min-width: 0; font: 500 15px/1.15 var(--font-face); letter-spacing: .03em; color: var(--muted); overflow: hidden; text-overflow: ellipsis }
 .cover-dir { font: 600 15px/1 var(--font-face); letter-spacing: .14em; text-transform: uppercase }
 .cover-dir.is-down { color: var(--down) }
 .cover-dir.is-up { color: var(--up) }
-.cell { min-width: 0; display: flex; flex-direction: column; gap: 5px }
-.cell-top { display: flex; justify-content: space-between; align-items: baseline; gap: 6px; white-space: nowrap; overflow: hidden }
-.cell-name { font: 500 13px/1.1 var(--font-face); letter-spacing: .12em; text-transform: uppercase; color: var(--muted) }
-.cell-val { font: 500 11px/1 var(--font-data); letter-spacing: 0 }
-.cell-bar { display: block; height: 4px; background: var(--line) }
+.cell { min-width: 0; display: flex; align-items: center; gap: 12px }
+.cell-val { flex: none; min-width: 66px; font: 500 11px/1 var(--font-data); letter-spacing: 0 }
+.cell-bar { flex: 1; display: block; height: 6px; background: var(--line) }
 .cell-bar b { display: block; height: 100%; width: 0; background: var(--muted) }
 .cell[data-state="none"] .cell-val { color: var(--dim) }
 .cell[data-state="ok"] .cell-val { color: var(--good) }
 .cell[data-state="ok"] .cell-bar b { background: var(--good) }
-.cell[data-state="bad"] .cell-name, .cell[data-state="bad"] .cell-val { color: var(--glitch) }
+.cell[data-state="bad"] .cell-val { color: var(--glitch) }
 .cell[data-state="bad"] .cell-bar b { background: var(--glitch) }
 
 /* ---- the screen, and the rack beside it ---- */
@@ -199,16 +202,44 @@ kbd { font: 400 10px/1 var(--font-data); letter-spacing: 0; text-transform: uppe
 .log tr.bad td { background: var(--glitch-soft) }
 .log-empty { margin: 0; padding: 10px 14px; color: var(--muted) }
 
-.how { flex: none; padding: 11px 14px }
-.how summary { font: 600 15px/1.1 var(--font-face); letter-spacing: .14em; text-transform: uppercase; cursor: pointer }
-.how p { margin: 10px 0 0; line-height: 1.3; color: var(--muted) }
-.how b { color: var(--fg); font-weight: 600 }
-.how a { color: var(--accent) }
+a.btn { text-decoration: none }
 
 dialog { width: min(700px, calc(100% - 48px)); padding: 18px; color: var(--fg); background: var(--panel); border: 1px solid var(--line); border-radius: 4px }
 dialog::backdrop { background: rgba(0, 0, 0, .6) }
 dialog p { margin: 0 0 12px }
 dialog textarea { display: block; width: 100%; height: 280px; margin-bottom: 14px; padding: 10px; font: 400 11px/1.6 var(--font-data); color: var(--fg); background: var(--screen); border: 1px solid var(--line); border-radius: 3px; resize: vertical }
+
+/* ---- how to use it: a roomy guide in its own panel, two columns when there is room ---- */
+dialog.help { width: min(660px, calc(100% - 48px)); max-height: calc(100% - 48px); padding: 0; border-color: var(--key-line); border-radius: 6px; overflow: hidden }
+dialog.help[open] { display: flex; flex-direction: column }
+.help-head { flex: none; display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 16px 14px 28px; border-bottom: 1px solid var(--line) }
+.help-head h2 { font-size: 24px }
+.help-body { flex: 1; min-height: 0; overflow: auto; padding: 26px 28px 6px; font-size: 17px; line-height: 1.4 }
+.help-body section { break-inside: avoid; margin: 0 0 28px }
+.help-body h3 { display: flex; align-items: center; gap: 12px; margin: 0 0 12px; font-size: 18px; letter-spacing: .12em }
+.help-body h3 i { flex: none; width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; background: var(--fg); color: var(--ink); border-radius: 2px; font: 600 12px/1 var(--font-data); letter-spacing: 0 }
+.help-body p { margin: 0 0 12px; color: var(--muted) }
+.help-body p.help-lead { font-size: 21px; line-height: 1.3; color: var(--fg) }
+.help-body b { color: var(--fg); font-weight: 600 }
+.help-body table { width: 100%; margin: 0 0 14px; border-collapse: collapse }
+.help-body th, .help-body td { padding: 8px 0; border-top: 1px solid var(--line); text-align: left; vertical-align: top }
+.help-body tr:last-child th, .help-body tr:last-child td { border-bottom: 1px solid var(--line) }
+.help-body th { width: 1%; padding-right: 22px; white-space: nowrap; font: 600 15px/1.55 var(--font-face); letter-spacing: .12em; text-transform: uppercase }
+.help-body th.is-red { color: var(--glitch) }
+.help-body th.is-amber { color: var(--warn) }
+.help-body td.num { width: 1%; padding-left: 18px; white-space: nowrap; font: 400 11px/2.15 var(--font-data); letter-spacing: 0; color: var(--muted) }
+.help-body ol { margin: 0 0 12px; padding-left: 24px; color: var(--muted) }
+.help-body li { margin: 0 0 7px; padding-left: 4px }
+.help-body kbd { display: inline-block; padding: 3px 6px; border: 1px solid var(--key-line); border-radius: 2px; color: var(--fg) }
+.help-body kbd + kbd { margin-left: 4px }
+.help-foot { flex: none; padding: 14px 28px; border-top: 1px solid var(--line); color: var(--muted) }
+.help-foot a { color: var(--accent) }
+/* three columns only on a screen big enough to show the whole guide at once (a 1440p monitor);
+   otherwise one column, so nobody has to scroll down one column and back up for the next */
+@media (min-width: 1900px) and (min-height: 1150px) {
+  dialog.help { width: min(1640px, calc(100% - 48px)) }
+  .help-body { columns: 3; column-gap: 52px }
+}
 
 /* short desktop windows (a laptop screen): tighten the faceplate so the screen keeps its height */
 @media (max-height: 840px) {
@@ -221,19 +252,22 @@ dialog textarea { display: block; width: 100%; height: 280px; margin-bottom: 14p
   .lamps { grid-auto-rows: minmax(34px, 1fr) }
   .tile { padding: 8px 12px }
   .cover { padding-block: 8px }
+  .cover-grid { row-gap: 6px }
   .work, .side { gap: 10px }
   .checks, .wheel { padding: 9px 12px }
   .check-list { margin-top: 6px; gap: 5px }
 }
 
-/* narrower desktop windows: the readouts drop under the lamps, then the roll tests stack */
+/* the tagline only where the faceplate has room for it */
+@media (max-width: 1699px) {
+  .tagline { display: none }
+}
+
+/* narrower desktop windows: the readouts drop under the lamps, and the key hints go */
 @media (max-width: 1399px) {
   .summary { grid-template-columns: minmax(320px, 400px) minmax(0, 1fr) }
   .tiles { grid-column: 1 / -1 }
-}
-@media (max-width: 1239px) {
-  .cover { grid-template-columns: 112px minmax(0, 1fr); row-gap: 10px }
-  .cover-group + .cover-group { grid-column: 2 }
+  .bar kbd { display: none }
 }
 </style>
 
@@ -244,6 +278,7 @@ dialog textarea { display: block; width: 100%; height: 280px; margin-bottom: 14p
       <p class="tagline">Roll anywhere on this page</p>
     </div>
     <div class="controls">
+      <button class="btn" type="button" id="btn-help">How to use it <kbd>?</kbd></button>
       <div class="seg" role="radiogroup" aria-label="Time shown across the screen">
         <span class="lbl" aria-hidden="true">Span</span>
         <input type="radio" name="zoom" id="zoom-3" value="3"><label for="zoom-3">3 s</label>
@@ -254,6 +289,7 @@ dialog textarea { display: block; width: 100%; height: 280px; margin-bottom: 14p
       <button class="btn" type="button" id="btn-pause" aria-pressed="false"><span id="btn-pause-text">Pause</span> <kbd>Space</kbd></button>
       <button class="btn" type="button" id="btn-reset">Reset <kbd>R</kbd></button>
       <button class="btn" type="button" id="btn-full" aria-pressed="false">Full screen <kbd>F</kbd></button>
+      <a class="btn" href="https://github.com/SirSnipesalot/scroll-wheel-tester" target="_blank" rel="noopener">GitHub</a>
     </div>
   </header>
 
@@ -284,8 +320,15 @@ dialog textarea { display: block; width: 100%; height: 280px; margin-bottom: 14p
 
   <section class="cover panel" aria-label="Roll tests: eight ways of rolling the wheel, all to be done">
     <div class="cover-head"><h2>Roll tests</h2><small id="cover-done">0 of 8 done</small></div>
-    <div class="cover-group" id="cover-0"><span class="cover-dir is-down">Down</span></div>
-    <div class="cover-group" id="cover-1"><span class="cover-dir is-up">Up</span></div>
+    <div class="cover-grid">
+      <span></span>
+      <div class="cover-col"><b>Single</b><small>one notch at a time</small></div>
+      <div class="cover-col"><b>Slow</b><small>a gentle, steady roll</small></div>
+      <div class="cover-col"><b>Normal</b><small>the way you usually scroll</small></div>
+      <div class="cover-col"><b>Fast</b><small>as fast as you can</small></div>
+      <div class="cover-group" id="cover-0"><span class="cover-dir is-down">Down</span></div>
+      <div class="cover-group" id="cover-1"><span class="cover-dir is-up">Up</span></div>
+    </div>
   </section>
 
   <div class="work">
@@ -301,7 +344,7 @@ dialog textarea { display: block; width: 100%; height: 280px; margin-bottom: 14p
       <p class="flag-note" id="sample-flag" hidden>Example trace</p>
       <p class="flag-note" id="paused-flag" hidden>Paused, wheel released</p>
       <p class="flag-note is-live" id="check-flag" hidden></p>
-      <p class="hint" id="hint" hidden><strong>Roll the wheel</strong><span>Fill the eight roll tests above: single notches, slow rolls, normal scrolling and fast flicks, each down and up.</span></p>
+      <p class="hint" id="hint" hidden><strong>Roll the wheel</strong><span>Fill the eight roll tests above: single notches, slow rolls, normal scrolling and fast flicks, each down and up. Press ? for the guide.</span></p>
     </section>
 
     <aside class="side">
@@ -359,20 +402,86 @@ dialog textarea { display: block; width: 100%; height: 280px; margin-bottom: 14p
         </div>
       </section>
 
-      <details class="how panel" id="how">
-        <summary>How to use it</summary>
-        <p>Keep the pointer over this page and roll the wheel. One click of the wheel is a <b>notch</b>. The page does not scroll while the tester is recording; Pause gives the wheel back.</p>
-        <p><b>Roll tests</b>, the strip above the chart, are the test itself. There are eight boxes: single notches, slow rolls, normal scrolling and fast flicks, each done downwards and upwards. You do not pick one. Just roll, and the tester works out how fast you rolled and fills the matching box. A box turns green when it has had enough notches. Do all eight: a worn wheel often misbehaves at one speed or in one direction only.</p>
-        <p><b>The verdict</b> is the large lamp. A fault is reported the moment it happens. A clean result only appears once all eight roll tests are done; until then it reads "clean so far" and lists what is left.</p>
-        <p><b>The six lamps</b> count what went wrong. Red lamps are certain faults. <b>Reversed</b>: a notch in the wrong direction while you were rolling. <b>Bounce-back</b>: a wrong-way notch just as you stopped. <b>False start</b>: a wrong-way notch just as you started. Those three flip direction within 60 ms, faster than a finger can turn a wheel back. <b>Hands off</b>: notches that arrived while nobody was touching the wheel. Amber lamps are suspects. <b>Back-step</b>: one slow wrong-way notch in a pause between rolls, which can be your finger dragging the wheel on its way back; lift your finger clear and see if they stop. <b>On click</b>: notches sent while you pressed the wheel button.</p>
-        <p><b>Extra checks</b> are optional. <b>Counted notches</b>: roll exactly ten notches by feel; nine or eleven on screen means the wheel drops or doubles notches. <b>Hands off</b>: ten seconds without touching the wheel. <b>Notches per turn</b>: mark the wheel, roll whole turns, and the count per turn falls out; most wheels have 24.</p>
-        <p><b>The chart</b> draws every signal from the wheel as a bar: above the line for up, below for down, red for a fault. The number beside each run of bars is how many notches it had. The lower half shows where the wheel has got to. The <b>wheel map</b> is one turn of the wheel with a dot wherever a fault fell.</p>
-        <p><b>Notch size</b> is what your browser reports for one notch. If it says "varies", you are on a touchpad, a smooth wheel or a system that speeds scrolling up, and the lamps mean less. A high-resolution wheel sends several signals per notch; the tester spots that and says so.</p>
-        <p><b>Before you blame the wheel:</b> close the mouse maker's software or turn off its smooth scrolling, plug in directly instead of through a hub, blow the wheel out with compressed air, and try another computer. A fault that follows the mouse is the mouse.</p>
-      </details>
     </aside>
   </div>
 </div>
+
+<dialog id="help" class="help" aria-labelledby="help-title">
+  <div class="help-head">
+    <h2 id="help-title">How to use it</h2>
+    <button class="btn btn-small" type="button" id="help-close">Close <kbd>Esc</kbd></button>
+  </div>
+  <div class="help-body">
+    <section>
+      <p class="help-lead">Think your scroll wheel is going bad? Roll it here and the tester will tell you.</p>
+      <p>Keep the pointer over the page and roll. The page does not scroll while the tester is recording; press <kbd>Space</kbd> to pause and get the wheel back. A <b>notch</b> is one click of the wheel.</p>
+    </section>
+    <section>
+      <h3><i>1</i>Do the eight roll tests</h3>
+      <p>The <b>Roll tests</b> grid above the chart is the test itself: four ways of rolling, each done down and up.</p>
+      <table>
+        <tr><th>Single</th><td>One notch at a time. Click, pause, click, pause.</td><td class="num">20 notches</td></tr>
+        <tr><th>Slow</th><td>A gentle, steady roll, slower than you normally scroll.</td><td class="num">30 notches</td></tr>
+        <tr><th>Normal</th><td>The way you usually scroll.</td><td class="num">30 notches</td></tr>
+        <tr><th>Fast</th><td>Flick it as fast as you comfortably can.</td><td class="num">30 notches</td></tr>
+      </table>
+      <p>You do not pick a box. Just roll, and the tester fills the box that matches how fast you rolled. A bar turns green when its box is done.</p>
+      <p><b>Do all eight.</b> A worn wheel often fails at one speed or in one direction only.</p>
+    </section>
+    <section>
+      <h3><i>2</i>Read the verdict</h3>
+      <table>
+        <tr><th>Clean so far</th><td>No faults yet, but some roll tests are not finished. It lists them.</td></tr>
+        <tr><th>Clean</th><td>All eight roll tests done and nothing went wrong.</td></tr>
+        <tr><th>Suspect</th><td>One or two faults. Keep rolling to see if it happens again.</td></tr>
+        <tr><th>Faulty wheel</th><td>Three or more faults.</td></tr>
+      </table>
+      <p>A fault shows up the moment it happens. A clean verdict needs all eight roll tests.</p>
+    </section>
+    <section>
+      <h3><i>3</i>See what went wrong</h3>
+      <p>Each lamp counts one kind of fault. Red lamps are the wheel's fault. Amber lamps can be your finger.</p>
+      <table>
+        <tr><th class="is-red">Reversed</th><td>A notch in the wrong direction while you were rolling.</td></tr>
+        <tr><th class="is-red">Bounce-back</th><td>A wrong-way notch just as you stopped.</td></tr>
+        <tr><th class="is-red">False start</th><td>A wrong-way notch just as you started.</td></tr>
+        <tr><th class="is-red">Hands off</th><td>Notches sent while nobody was touching the wheel.</td></tr>
+        <tr><th class="is-amber">Back-step</th><td>One slow wrong-way notch in a pause between rolls. Lift your finger clear of the wheel and see if it stops.</td></tr>
+        <tr><th class="is-amber">On click</th><td>Notches sent while you pressed the wheel button.</td></tr>
+      </table>
+    </section>
+    <section>
+      <h3><i>4</i>Extra checks, if you want them</h3>
+      <table>
+        <tr><th>Counted notches</th><td>Press <kbd>C</kbd>, roll exactly ten notches by feel, then press <kbd>Enter</kbd>. Nine or eleven on screen means the wheel drops or doubles notches.</td></tr>
+        <tr><th>Hands off</th><td>Press <kbd>H</kbd> and leave the wheel alone for ten seconds. Anything it sends, it is doing by itself.</td></tr>
+        <tr><th>Notches per turn</th><td>Press <kbd>T</kbd>, roll one full turn of a marked wheel, then press <kbd>Enter</kbd>. Most wheels have 24.</td></tr>
+      </table>
+    </section>
+    <section>
+      <h3><i>5</i>If it says your wheel is faulty</h3>
+      <ol>
+        <li>Close the mouse maker's software, or turn off its smooth scrolling, and test again.</li>
+        <li>Plug in directly instead of through a hub. Try another USB port.</li>
+        <li>Blow the wheel out with compressed air.</li>
+        <li>Test the mouse on another computer.</li>
+      </ol>
+      <p>Still faulty? It is the mouse. Press <b>Copy report</b> and paste the result into your warranty claim.</p>
+    </section>
+    <section>
+      <h3>Keys</h3>
+      <table>
+        <tr><th><kbd>Space</kbd></th><td>Pause or resume</td></tr>
+        <tr><th><kbd>R</kbd></th><td>Reset</td></tr>
+        <tr><th><kbd>F</kbd></th><td>Full screen</td></tr>
+        <tr><th><kbd>C</kbd><kbd>H</kbd><kbd>T</kbd></th><td>Start an extra check</td></tr>
+        <tr><th><kbd>Enter</kbd></th><td>Finish a check</td></tr>
+        <tr><th><kbd>Esc</kbd></th><td>Cancel a check, or close this guide</td></tr>
+      </table>
+    </section>
+  </div>
+  <div class="help-foot">The full guide, the source and a place to report problems: <a href="https://github.com/SirSnipesalot/scroll-wheel-tester" target="_blank" rel="noopener">github.com/SirSnipesalot/scroll-wheel-tester</a></div>
+</dialog>
 
 <dialog id="csv-dialog" aria-labelledby="csv-title">
   <p id="csv-title">Your browser blocked the clipboard. Select the text below and copy it.</p>
@@ -944,7 +1053,7 @@ const CELLS = [[], []];
 for (let d = 0; d < 2; d++) for (let b = 0; b < 4; b++) {
   const el = document.createElement('div');
   el.className = 'cell'; el.dataset.state = 'none'; el.title = CELL_TIP[b];
-  el.innerHTML = '<span class="cell-top"><span class="cell-name">' + BAND[b] + '</span><span class="cell-val"></span></span><i class="cell-bar"><b></b></i>';
+  el.innerHTML = '<i class="cell-bar"><b></b></i><span class="cell-val"></span>';
   $('cover-' + d).appendChild(el);
   CELLS[d][b] = { el, val: el.querySelector('.cell-val'), bar: el.querySelector('b') };
 }
@@ -1305,6 +1414,14 @@ press('btn-pause', () => setPaused(!S.paused));
 press('btn-reset', reset);
 press('btn-full', toggleFull);
 press('btn-copy', (btn) => copyText(toCsv(), btn));
+
+// The guide opens over the page. While it, or any other dialog, is open the wheel
+// and the keys belong to the dialog, so the wheel scrolls the guide as usual.
+const dialogOpen = () => !!document.querySelector('dialog[open]');
+function openHelp() { if (!dialogOpen()) $('help').showModal(); }
+press('btn-help', openHelp);
+$('help-close').addEventListener('click', () => $('help').close());
+$('help').addEventListener('click', (e) => { if (e.target === e.currentTarget) e.currentTarget.close(); });   // a click outside the panel
 press('btn-report', (btn) => { analyse(); renderStats(performance.now()); copyText(toReport(), btn); });
 press('btn-turn', () => startCheck('turn'));
 press('btn-count', () => startCheck('count'));
@@ -1318,7 +1435,7 @@ if (!document.documentElement.requestFullscreen) $('btn-full').hidden = true;
 document.addEventListener('fullscreenchange', () => $('btn-full').setAttribute('aria-pressed', String(!!document.fullscreenElement)));
 
 window.addEventListener('wheel', (e) => {
-  if (S.paused || $('csv-dialog').open) return;
+  if (S.paused || dialogOpen()) return;
   e.preventDefault();
   const mode = e.deltaMode, dy = e.deltaY, dx = e.deltaX;   // deltaMode first, so Firefox reports lines
   if (S.sample) reset();
@@ -1354,7 +1471,7 @@ window.addEventListener('mouseup', (e) => {
 window.addEventListener('auxclick', (e) => { if (e.button === 1 && !S.paused) e.preventDefault(); });
 
 window.addEventListener('keydown', (e) => {
-  if (e.ctrlKey || e.metaKey || e.altKey || $('csv-dialog').open) return;
+  if (e.ctrlKey || e.metaKey || e.altKey || dialogOpen()) return;
   const tag = e.target.tagName, k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
   if (tag === 'TEXTAREA') return;
   if (e.code === 'Space' || k === 'Enter') {
@@ -1363,6 +1480,7 @@ window.addEventListener('keydown', (e) => {
     if (CHK.active === 'turn' || CHK.active === 'count') finishCheck();
     else if (e.code === 'Space' && !CHK.active) setPaused(!S.paused);
   } else if (k === 'Escape') cancelCheck();
+  else if (k === '?') openHelp();
   else if (k === 't') toggleCheck('turn');
   else if (k === 'c') toggleCheck('count');
   else if (k === 'h') toggleCheck('rest');
