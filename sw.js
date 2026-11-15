@@ -3,7 +3,7 @@
 //
 // Keeps the page, its icons and its two fonts in a cache so the tester still opens with no
 // network. Bump CACHE when the files change so old copies are thrown away.
-const CACHE = 'scroll-wheel-tester-v1';
+const CACHE = 'scroll-wheel-tester-v2';
 const CORE = ['./', 'manifest.webmanifest', 'icon.svg', 'icon-192.png', 'icon-512.png'];
 
 self.addEventListener('install', (event) => {

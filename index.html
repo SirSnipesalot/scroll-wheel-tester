@@ -23,7 +23,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=Martian+Mono:wght@400;500;600&display=swap">
 <style>
 /* Layout: a bench instrument. Faceplate header with keys, an annunciator row (verdict lamp,
-   one lamp per kind of fault, numeric readouts), a coverage strip, then the screen (the tape)
+   one lamp per kind of fault, numeric readouts), the roll tests strip, then the screen (the tape)
    with the checks, wheel map and event log racked beside it. One look, dark, desktop only. */
 :root {
   color-scheme: dark;
@@ -120,8 +120,9 @@ kbd { font: 400 10px/1 var(--font-data); letter-spacing: 0; text-transform: uppe
 .tile.is-down dd span { color: var(--down) }
 .tile.is-bad dd span { color: var(--glitch) }
 
-/* ---- coverage: every speed and direction the wheel has been tried at ---- */
-.cover { display: grid; grid-template-columns: 96px minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: center; padding: 10px 16px }
+/* ---- roll tests: every speed and direction the wheel has to be tried at ---- */
+.cover { display: grid; grid-template-columns: 112px minmax(0, 1fr) minmax(0, 1fr); gap: 20px; align-items: center; padding: 10px 16px }
+.cover-head small { display: block; margin-top: 5px; font: 400 10px/1 var(--font-data); letter-spacing: 0; color: var(--muted); white-space: nowrap }
 .cover-group { display: grid; grid-template-columns: 48px repeat(4, minmax(0, 1fr)); gap: 10px; align-items: center }
 .cover-dir { font: 600 15px/1 var(--font-face); letter-spacing: .14em; text-transform: uppercase }
 .cover-dir.is-down { color: var(--down) }
@@ -225,13 +226,13 @@ dialog textarea { display: block; width: 100%; height: 280px; margin-bottom: 14p
   .check-list { margin-top: 6px; gap: 5px }
 }
 
-/* narrower desktop windows: the readouts drop under the lamps, then coverage stacks */
+/* narrower desktop windows: the readouts drop under the lamps, then the roll tests stack */
 @media (max-width: 1399px) {
   .summary { grid-template-columns: minmax(320px, 400px) minmax(0, 1fr) }
   .tiles { grid-column: 1 / -1 }
 }
 @media (max-width: 1239px) {
-  .cover { grid-template-columns: 96px minmax(0, 1fr); row-gap: 10px }
+  .cover { grid-template-columns: 112px minmax(0, 1fr); row-gap: 10px }
   .cover-group + .cover-group { grid-column: 2 }
 }
 </style>
@@ -265,10 +266,10 @@ dialog textarea { display: block; width: 100%; height: 280px; margin-bottom: 14p
       </div>
     </div>
     <ul class="lamps" aria-label="Faults by kind">
-      <li id="l-rev" data-lit="off" title="An event against the roll in the middle of a stroke. Certain: no finger turns a wheel back that fast."><span>Reversed</span><b>0</b></li>
-      <li id="l-bounce" data-lit="off" title="An event against the roll straight after the last notch of a stroke, as the wheel settles. Certain."><span>Bounce-back</span><b>0</b></li>
-      <li id="l-start" data-lit="off" title="An event against the roll just before a stroke gets going. Certain."><span>False start</span><b>0</b></li>
-      <li id="l-back" data-lit="off" title="One slow event against the roll in the pause between two strokes. Suspect: it may be your finger dragging the wheel back."><span>Back-step</span><b>0</b></li>
+      <li id="l-rev" data-lit="off" title="A notch in the wrong direction while you were rolling. Certain: no finger turns a wheel back that fast."><span>Reversed</span><b>0</b></li>
+      <li id="l-bounce" data-lit="off" title="A notch in the wrong direction just as you stopped rolling. Certain."><span>Bounce-back</span><b>0</b></li>
+      <li id="l-start" data-lit="off" title="A notch in the wrong direction just as you started rolling. Certain."><span>False start</span><b>0</b></li>
+      <li id="l-back" data-lit="off" title="One slow notch in the wrong direction in a pause between rolls. Suspect: it may be your finger dragging the wheel back."><span>Back-step</span><b>0</b></li>
       <li id="l-rest" data-lit="off" title="Events that arrived during the hands-off check, with nobody touching the wheel. Certain."><span>Hands off</span><b>0</b></li>
       <li id="l-click" data-lit="off" title="Wheel events that arrived as the wheel button was pressed. Suspect: pressing can nudge the wheel."><span>On click</span><b>0</b></li>
     </ul>
@@ -276,13 +277,13 @@ dialog textarea { display: block; width: 100%; height: 280px; margin-bottom: 14p
       <div class="tile is-up"><dt>Up</dt><dd><span id="s-up">0</span><small>notches</small></dd></div>
       <div class="tile is-down"><dt>Down</dt><dd><span id="s-down">0</span><small>notches</small></dd></div>
       <div class="tile" id="t-rate"><dt>Fault rate</dt><dd><span id="s-rate">0%</span><small id="s-rate-sub">of events</small></dd></div>
-      <div class="tile" id="t-stroke"><dt>Stroke</dt><dd><span id="s-stroke">&ndash;</span><small id="s-stroke-sub">per stroke</small></dd></div>
+      <div class="tile"><dt>Peak speed</dt><dd><span id="s-peak">0</span><small>notches/s</small></dd></div>
       <div class="tile"><dt>Notch size</dt><dd><span id="s-step">&ndash;</span><small id="s-step-sub">per notch</small></dd></div>
     </dl>
   </section>
 
-  <section class="cover panel" aria-label="Coverage: speeds and directions tested">
-    <h2>Coverage</h2>
+  <section class="cover panel" aria-label="Roll tests: eight ways of rolling the wheel, all to be done">
+    <div class="cover-head"><h2>Roll tests</h2><small id="cover-done">0 of 8 done</small></div>
     <div class="cover-group" id="cover-0"><span class="cover-dir is-down">Down</span></div>
     <div class="cover-group" id="cover-1"><span class="cover-dir is-up">Up</span></div>
   </section>
@@ -300,13 +301,13 @@ dialog textarea { display: block; width: 100%; height: 280px; margin-bottom: 14p
       <p class="flag-note" id="sample-flag" hidden>Example trace</p>
       <p class="flag-note" id="paused-flag" hidden>Paused, wheel released</p>
       <p class="flag-note is-live" id="check-flag" hidden></p>
-      <p class="hint" id="hint" hidden><strong>Roll the wheel</strong><span>Scroll the way you normally do, stroke after stroke. Try single notches, slow rolls and fast flicks, both ways.</span></p>
+      <p class="hint" id="hint" hidden><strong>Roll the wheel</strong><span>Fill the eight roll tests above: single notches, slow rolls, normal scrolling and fast flicks, each down and up.</span></p>
     </section>
 
     <aside class="side">
-      <section class="checks panel" aria-label="Checks">
+      <section class="checks panel" aria-label="Extra checks">
         <div id="check-idle">
-          <h2>Checks</h2>
+          <h2>Extra checks</h2>
           <ul class="check-list">
             <li><div><span class="check-name">Notches per turn</span><span class="check-res" id="res-turn">Not measured</span></div><button class="btn btn-small" type="button" id="btn-turn">Count <kbd>T</kbd></button></li>
             <li><div><span class="check-name">Counted notches</span><span class="check-res" id="res-count">Not run</span></div><button class="btn btn-small" type="button" id="btn-count">Count <kbd>C</kbd></button></li>
@@ -359,14 +360,15 @@ dialog textarea { display: block; width: 100%; height: 280px; margin-bottom: 14p
       </section>
 
       <details class="how panel" id="how">
-        <summary>How to read it</summary>
-        <p>Scroll the way you normally do. People roll a wheel in finger strokes: two to seven notches, a pause while the finger comes back, then the next stroke. The tester splits your rolling into those strokes, drawn as solid runs along the centre line with the notches in each, and judges every wrong-way event by where it falls in a stroke.</p>
-        <p><b>Reversed</b> is an event against the roll in the middle of a stroke that flipped within 60 ms; a <b>false start</b> is the same thing just before a stroke gets going. A finger cannot turn a wheel back that fast, so it is the wheel: usually dirty or worn encoder contacts. <b>Bounce-back</b> is a wrong-way event straight after the last notch of a stroke, as the wheel settles or the finger lifts. <b>Back-step</b> is one slow event against the roll in the pause between two strokes. That can be the wheel, or your finger dragging it back on the way to the next stroke, so it counts as suspect: lift your finger clear between strokes and see if they stop.</p>
-        <p><b>Coverage</b> shows how much rolling each direction has had at each speed: single notches, slow rolls, normal strokes and fast flicks. Faults often show at one speed only, so the verdict stays at "clean so far" until every cell has had enough. Slow, steady rolling exposes the most: the browser hands over wheel events once per screen frame and adds up what arrived in between, so in a fast flick a stray can cancel against a real notch.</p>
-        <p><b>Checks</b> need you to take part. <b>Notches per turn</b>: mark the wheel, roll whole turns, and the count per turn falls out. Most wheels have 24 notches, 15&deg; apart; 18 is the other common count. <b>Counted notches</b>: roll exactly ten clicks by feel. If the tester saw nine or eleven, the wheel is dropping or doubling notches; dust in the wheel sensor is the usual cause of dropped ones. <b>Hands off</b>: ten seconds without touching the wheel. Anything it reports then, it is doing by itself.</p>
-        <p>The <b>wheel map</b> is one turn of the wheel. The hand shows where the wheel is now and each dot is a fault. Once the notches per turn are measured, dots piling up in one place suggest the fault sits at one spot on the wheel, which is worth knowing if you open the mouse to clean it.</p>
-        <p><b>Notch size</b> is what your browser reports for one notch. A high-resolution wheel sends several events per notch and steps back a little as it settles; the tester spots that and stops calling those faults. If the sizes vary, you have a smooth wheel, a touchpad or OS acceleration, and the fault counts mean less. <b>Wheel click</b> counts presses of the wheel button; a double-fire is a second press under 50 ms after release, which points to a worn switch.</p>
-        <p><b>Before you blame the wheel:</b> blow it out with compressed air, close the mouse maker's software or turn off its smooth scrolling, plug in directly instead of through a hub, and try another port or another computer. A fault that follows the mouse is the mouse. If faults stop while you press the wheel gently sideways, its axle is loose in the encoder.</p>
+        <summary>How to use it</summary>
+        <p>Keep the pointer over this page and roll the wheel. One click of the wheel is a <b>notch</b>. The page does not scroll while the tester is recording; Pause gives the wheel back.</p>
+        <p><b>Roll tests</b>, the strip above the chart, are the test itself. There are eight boxes: single notches, slow rolls, normal scrolling and fast flicks, each done downwards and upwards. You do not pick one. Just roll, and the tester works out how fast you rolled and fills the matching box. A box turns green when it has had enough notches. Do all eight: a worn wheel often misbehaves at one speed or in one direction only.</p>
+        <p><b>The verdict</b> is the large lamp. A fault is reported the moment it happens. A clean result only appears once all eight roll tests are done; until then it reads "clean so far" and lists what is left.</p>
+        <p><b>The six lamps</b> count what went wrong. Red lamps are certain faults. <b>Reversed</b>: a notch in the wrong direction while you were rolling. <b>Bounce-back</b>: a wrong-way notch just as you stopped. <b>False start</b>: a wrong-way notch just as you started. Those three flip direction within 60 ms, faster than a finger can turn a wheel back. <b>Hands off</b>: notches that arrived while nobody was touching the wheel. Amber lamps are suspects. <b>Back-step</b>: one slow wrong-way notch in a pause between rolls, which can be your finger dragging the wheel on its way back; lift your finger clear and see if they stop. <b>On click</b>: notches sent while you pressed the wheel button.</p>
+        <p><b>Extra checks</b> are optional. <b>Counted notches</b>: roll exactly ten notches by feel; nine or eleven on screen means the wheel drops or doubles notches. <b>Hands off</b>: ten seconds without touching the wheel. <b>Notches per turn</b>: mark the wheel, roll whole turns, and the count per turn falls out; most wheels have 24.</p>
+        <p><b>The chart</b> draws every signal from the wheel as a bar: above the line for up, below for down, red for a fault. The number beside each run of bars is how many notches it had. The lower half shows where the wheel has got to. The <b>wheel map</b> is one turn of the wheel with a dot wherever a fault fell.</p>
+        <p><b>Notch size</b> is what your browser reports for one notch. If it says "varies", you are on a touchpad, a smooth wheel or a system that speeds scrolling up, and the lamps mean less. A high-resolution wheel sends several signals per notch; the tester spots that and says so.</p>
+        <p><b>Before you blame the wheel:</b> close the mouse maker's software or turn off its smooth scrolling, plug in directly instead of through a hub, blow the wheel out with compressed air, and try another computer. A fault that follows the mouse is the mouse.</p>
       </details>
     </aside>
   </div>
@@ -388,7 +390,7 @@ const CFG = {
   idleGap: 700,      // the tape stops this long after the last event
   settle: 500,       // silence that ends a roll; the next event starts fresh. macOS, libinput and
                      // Chromium all end a scroll after 500 ms without input.
-  strokeGap: 130,    // a pause longer than this separates two finger strokes. Notch intervals are
+  rollGap: 130,      // a pause longer than this separates two rolls. Notch intervals are
                      // bimodal with the dip just above 100 ms (Hinckley 2002); Microsoft's wheel
                      // code keeps events 130 ms apart or closer in one series.
   fastFlip: 60,      // a change of direction quicker than this is not a finger. Nobody has measured
@@ -400,23 +402,23 @@ const CFG = {
   speedWin: 250,     // window for the speed readouts
   bands: [20, 40],   // notches per second: slow below the first, fast above the second. Microsoft
                      // treats four notches about 27 ms apart (37 a second) as a fast roll.
-  targets: [20, 30, 30, 30],   // notches wanted per coverage cell: steps, slow, normal, fast
+  targets: [20, 30, 30, 30],   // notches wanted per roll test: single, slow, normal, fast
   clickWin: 150,     // a wheel event this close to a wheel-button press "moved when clicked"
   restMs: 10000,     // length of the hands-off check
   maxEvents: 60000,
   logRows: 250
 };
 const UNIT = ['px', 'lines', 'pages'];
-const BAND = ['Steps', 'Slow', 'Normal', 'Fast'];
-const BAND_PHRASE = ['single notches', 'slow rolls', 'normal strokes', 'fast flicks'];
+const BAND = ['Single', 'Slow', 'Normal', 'Fast'];
+const BAND_PHRASE = ['single notches', 'slow rolls', 'normal scrolling', 'fast flicks'];
 
-// What an event turned out to be. People scroll in finger strokes (roll, lift, roll),
-// so a wrong-way event is judged by where it falls in a stroke.
+// What an event turned out to be. A wrong-way event is judged by where it falls:
+// in the middle of a roll, as one ends, as one starts, or in the pause between two.
 const OK = 0;
-const MID = 1;     // against the roll in the middle of a stroke, flipped faster than a finger can
-const END = 2;     // straight after the last notch of a stroke, then a pause
-const START = 3;   // straight before a stroke gets going
-const BACK = 4;    // slowly, in the pause between two strokes: could be the returning finger
+const MID = 1;     // against the roll in the middle of a roll, flipped faster than a finger can
+const END = 2;     // straight after the last notch of a roll, then a pause
+const START = 3;   // straight before a roll gets going
+const BACK = 4;    // slowly, in the pause between two rolls: could be the returning finger
 const GHOST = 5;   // arrived during the hands-off check
 const FLAG = ['', 'reversed', 'bounce-back', 'false start', 'back-step', 'untouched'];
 const certain = (f) => f === MID || f === END || f === START || f === GHOST;
@@ -429,7 +431,7 @@ const S = {
   step: 0, stepped: true,
   wdHist: new Map(), wdN: 0,                  // legacy wheelDelta sizes, where one notch is 120
   model: 'delta', hires: false, perNotch: 1,  // how notches are counted (see analyse)
-  strokes: [],
+  rolls: [],
   paused: false, sample: false, full: false, zoom: 6,
   clicks: 0, bounces: 0, tiltL: 0, tiltR: 0, lastMidUp: -1e9, midHeld: false, clickUntil: -1e9,
   zero: 0,           // wheel events with no movement in them at all
@@ -447,12 +449,6 @@ function notchesOf(abs, wd) {
   return 1;
 }
 const mod = (a, n) => ((a % n) + n) % n;
-
-function median(a) {
-  if (!a.length) return 0;
-  const s = a.slice().sort((x, y) => x - y), m = s.length >> 1;
-  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
-}
 
 function flagRange(a, b, f) {
   for (let i = a; i <= b; i++) S.ev[i].flag = f;
@@ -496,7 +492,7 @@ function classify(i) {
     if (b) {
       // Back in the original direction: judge the strays in between.
       const sinceStray = e.t - ev[i - 1].t;
-      if (b.fast) flagRange(b.i0, i - 1, sinceStray <= CFG.strokeGap ? MID : END);
+      if (b.fast) flagRange(b.i0, i - 1, sinceStray <= CFG.rollGap ? MID : END);
       else if (sinceStray <= CFG.fastFlip) flagRange(b.i0, i - 1, START);
       else if (b.steady && e.t - b.tA <= CFG.backWindow) flagRange(b.i0, i - 1, BACK);
       S.blip = null;
@@ -538,7 +534,7 @@ function reflow() {
   S.dirty = true;
 }
 
-// Full pass over the log: notch size, totals, strokes, coverage and the wheel map.
+// Full pass over the log: notch size, totals, rolls, the roll tests and the wheel map.
 function analyse() {
   const ev = S.ev, N = ev.length;
 
@@ -590,48 +586,40 @@ function analyse() {
   const turnKnown = per >= 6 && Math.abs(per - Math.round(per)) < 0.01;
   const turnN = turnKnown ? Math.round(per) : 24;
 
-  // One pass: totals, fault counts, and the finger strokes with the faults that belong to them.
-  const f = [0, 0, 0, 0, 0, 0], strokes = [], marks = [];
-  let up = 0, down = 0, clickMoved = 0, peak = 0, w = 0, win = 0, cur = null, early = 0;
+  // One pass: totals, fault counts, and the rolls with the faults that belong to them.
+  const f = [0, 0, 0, 0, 0, 0], rolls = [], marks = [];
+  let up = 0, down = 0, clickMoved = 0, peak = 0, cur = null, early = 0;
   for (let i = 0; i < N; i++) {
     const e = ev[i];
     if (e.dir > 0) up += e.n; else down += e.n;
-    win += e.n;
-    while (ev[w].t < e.t - CFG.speedWin) { win -= ev[w].n; w++; }
-    if (i - w >= 3) { const r = win / (CFG.speedWin / 1000); if (r > peak) peak = r; }
     if (e.flag) {
       f[e.flag]++;
       if (e.flag === GHOST) continue;
       marks.push({ p: mod(e.pos, turnN), sure: certain(e.flag) });
-      if (e.flag === START || !cur) early++;        // a false start belongs to the stroke that follows
+      if (e.flag === START || !cur) early++;        // a false start belongs to the roll that follows
       else if (e.flag === BACK) cur.maybe++;
       else cur.bad++;
       continue;
     }
     if (e.click) clickMoved++;
-    if (!cur || e.dir !== cur.dir || e.t - cur.t1 > CFG.strokeGap) {
+    if (!cur || e.dir !== cur.dir || e.t - cur.t1 > CFG.rollGap) {
       cur = { dir: e.dir, i0: i, i1: i, t0: e.t, t1: e.t, n: 0, k: 0, first: e.n, bad: early, maybe: 0, band: 0 };
       early = 0;
-      strokes.push(cur);
+      rolls.push(cur);
     }
     cur.i1 = i; cur.t1 = e.t; cur.n += e.n; cur.k++;
   }
 
-  // Coverage: how much rolling each direction has had at each speed, and what went wrong there.
+  // Roll tests: how much rolling each direction has had at each speed, and what went wrong there.
   const cells = [[], []];
   for (let d = 0; d < 2; d++) for (let b = 0; b < 4; b++) cells[d][b] = { n: 0, bad: 0, maybe: 0 };
-  const sN = [], sDur = [], sPause = [];
-  for (let j = 0; j < strokes.length; j++) {
-    const s = strokes[j], dur = s.t1 - s.t0;
+  for (let j = 0; j < rolls.length; j++) {
+    const s = rolls[j], dur = s.t1 - s.t0;
     const rate = s.k > 1 && dur > 0 ? (s.n - s.first) / (dur / 1000) : 0;
+    if (s.k >= 3 && rate > peak) peak = rate;   // fastest roll of three notches or more
     s.band = s.k === 1 ? (s.n > 1 ? 3 : 0) : rate < CFG.bands[0] ? 1 : rate <= CFG.bands[1] ? 2 : 3;
     const c = cells[s.dir > 0 ? 1 : 0][s.band];
     c.n += s.n; c.bad += s.bad; c.maybe += s.maybe;
-    if (s.k > 1 && j >= strokes.length - 300) {
-      sN.push(s.n); sDur.push(dur);
-      const p = strokes[j - 1];
-      if (p && p.dir === s.dir && s.t0 - p.t1 < 1000) sPause.push(s.t0 - p.t1);
-    }
   }
   let have = 0, want = 0;
   const missing = [];
@@ -657,11 +645,10 @@ function analyse() {
 
   const sure = f[MID] + f[END] + f[START] + f[GHOST];
   const countOff = CHK.countRes.filter((r) => r.got !== r.target).length;
-  S.strokes = strokes;
+  S.rolls = rolls;
   S.A = {
     N, up, down, f, sure, clickMoved, countOff, maybe: f[BACK] + clickMoved + countOff,
     peak, total: up + down, lo, hi, cells, coverage: want ? have / want : 0, missing,
-    strokeCount: sN.length, sN: median(sN), sDur: median(sDur), sPause: median(sPause),
     turnN, turnKnown, marks: marks.slice(-240), cluster
   };
 }
@@ -832,10 +819,10 @@ function draw(now) {
   ctx.fillStyle = C.muted; ctx.textAlign = 'center';
   for (let i = 0; i < pauses.length; i += 2) ctx.fillText(pauseText(pauses[i + 1]), pauses[i], yA1 + 10);
 
-  // finger strokes: a solid run along the baseline, with the notch count on the empty side
+  // each roll: a solid run along the baseline, with its notch count on the empty side
   const su = new Path2D(), sd = new Path2D();
-  for (let j = S.strokes.length - 1; j >= 0; j--) {
-    const s = S.strokes[j];
+  for (let j = S.rolls.length - 1; j >= 0; j--) {
+    const s = S.rolls[j];
     if (s.i1 < i0) break;
     if (s.k < 2 || s.i1 >= N) continue;
     const xa = X(ev[s.i0]), xb = X(ev[s.i1]);
@@ -938,7 +925,6 @@ const trim = (n) => String(Math.round(n * 100) / 100);
 const plural = (n, one, many) => fmt(n) + ' ' + (n === 1 ? one : many);
 const setText = (id, s) => { const el = $(id); if (el.textContent !== s) el.textContent = s; };
 const setClass = (id, c) => { const el = $(id); if (el.className !== c) el.className = c; };
-const setTitle = (id, s) => { const el = $(id); if (el.title !== s) el.title = s; };
 
 // An annunciator lamp: dark at zero, lit red for a certain fault or amber for a suspect one.
 function lamp(id, n, kind) {
@@ -947,12 +933,12 @@ function lamp(id, n, kind) {
   if (el.lastElementChild.textContent !== num) el.lastElementChild.textContent = num;
 }
 
-// coverage cells: four speeds for each direction
+// roll test boxes: four speeds for each direction
 const CELL_TIP = [
-  'Single notches with a pause between them',
-  'Rolls slower than ' + CFG.bands[0] + ' notches a second',
-  'Rolls of ' + CFG.bands[0] + ' to ' + CFG.bands[1] + ' notches a second',
-  'Flicks faster than ' + CFG.bands[1] + ' notches a second'
+  'Single notches: one click of the wheel at a time, with a clear pause after each. ' + CFG.targets[0] + ' notches needed.',
+  'Slow rolls: a gentle, steady roll, under ' + CFG.bands[0] + ' notches a second. ' + CFG.targets[1] + ' notches needed.',
+  'Normal scrolling: the way you usually scroll, ' + CFG.bands[0] + ' to ' + CFG.bands[1] + ' notches a second. ' + CFG.targets[2] + ' notches needed.',
+  'Fast flicks: as fast as you comfortably can, over ' + CFG.bands[1] + ' notches a second. ' + CFG.targets[3] + ' notches needed.'
 ];
 const CELLS = [[], []];
 for (let d = 0; d < 2; d++) for (let b = 0; b < 4; b++) {
@@ -963,15 +949,19 @@ for (let d = 0; d < 2; d++) for (let b = 0; b < 4; b++) {
   CELLS[d][b] = { el, val: el.querySelector('.cell-val'), bar: el.querySelector('b') };
 }
 
+// The roll tests: eight boxes, each filled by rolling the wheel one way at one speed.
 function renderCoverage(a) {
+  let done = 0;
   for (let d = 0; d < 2; d++) for (let b = 0; b < 4; b++) {
     const c = a.cells[d][b], t = CFG.targets[b], ui = CELLS[d][b];
     const state = c.bad ? 'bad' : c.n >= t ? 'ok' : c.n ? 'part' : 'none';
     const val = c.bad ? c.bad + ' in ' + fmt(c.n) : c.n >= t ? fmt(c.n) : c.n + '/' + t;
+    if (c.n >= t) done++;
     if (ui.el.dataset.state !== state) ui.el.dataset.state = state;
     if (ui.val.textContent !== val) ui.val.textContent = val;
     ui.bar.style.width = Math.round(Math.min(1, c.n / t) * 100) + '%';
   }
+  setText('cover-done', done + ' of 8 done');
 }
 
 function faultText(f) {
@@ -997,15 +987,7 @@ function renderStats(now) {
   const rate = a.N ? a.sure / a.N * 100 : 0;
   setText('s-rate', (rate === 0 ? '0' : rate < 0.1 ? '<0.1' : rate < 10 ? rate.toFixed(1) : rate.toFixed(0)) + '%');
   setText('s-rate-sub', a.sure ? '1 in ' + fmt(Math.round(a.N / a.sure)) : 'of events');
-  if (a.strokeCount >= 3) {
-    setText('s-stroke', trim(a.sN));
-    setText('s-stroke-sub', 'in ' + Math.round(a.sDur) + ' ms');
-    setTitle('t-stroke', 'Your typical finger stroke: ' + trim(a.sN) + ' notches in ' + Math.round(a.sDur) + ' ms, then ' + Math.round(a.sPause) + ' ms before the next');
-  } else {
-    setText('s-stroke', '–');
-    setText('s-stroke-sub', 'per stroke');
-    setTitle('t-stroke', 'Notches in one finger stroke');
-  }
+  setText('s-peak', fmt(Math.round(a.peak)));
   const unit = a.N ? UNIT[S.ev[a.N - 1].mode] || 'px' : 'px';
   if (!a.N) { setText('s-step', '–'); setText('s-step-sub', 'per notch'); }
   else if (S.hires) { setText('s-step', '1/' + S.perNotch); setText('s-step-sub', 'notch/event'); }
@@ -1047,18 +1029,18 @@ function renderStats(now) {
     level = 'warn';
     title = 'Check your technique';
     const parts = [];
-    if (f[BACK]) parts.push(plural(f[BACK], 'back-step', 'back-steps') + ' between strokes');
+    if (f[BACK]) parts.push(plural(f[BACK], 'back-step', 'back-steps') + ' between rolls');
     if (a.clickMoved) parts.push(plural(a.clickMoved, 'event', 'events') + ' as the wheel was clicked');
     if (a.countOff) parts.push(plural(a.countOff, 'count', 'counts') + ' that came out wrong');
-    detail = 'No certain faults, but ' + parts.join(', ') + '. Lift your finger clear between strokes and see if they stop.';
+    detail = 'No certain faults, but ' + parts.join(', ') + '. Lift your finger clear of the wheel between rolls and see if they stop.';
   } else if (a.coverage < 1) {
     title = 'Clean so far';
     const m = a.missing;
-    detail = 'No faults in ' + fmt(a.N) + ' events. Still to try: ' + m.slice(0, 3).join(', ') + (m.length > 3 ? ' and ' + (m.length - 3) + ' more' : '') + '.';
+    detail = 'No faults in ' + fmt(a.N) + ' events. Roll tests still to do: ' + m.slice(0, 3).join(', ') + (m.length > 3 ? ' and ' + (m.length - 3) + ' more' : '') + '.';
   } else {
     level = 'good';
     title = 'Clean';
-    detail = 'No faults in ' + fmt(a.total) + ' notches, at every speed, both ways.';
+    detail = 'All eight roll tests done, and no faults in ' + fmt(a.total) + ' notches.';
   }
   if (!S.sample && S.hires) {
     // A high-resolution wheel settles with small back-steps of its own, so wrong-way events prove nothing.
@@ -1181,15 +1163,14 @@ function toReport() {
   L.push('Scroll Wheel Tester report, ' + d.getFullYear() + '-' + p2(d.getMonth() + 1) + '-' + p2(d.getDate()) + ' ' + p2(d.getHours()) + ':' + p2(d.getMinutes()));
   L.push('Browser: ' + navigator.userAgent);
   L.push('Verdict: ' + $('verdict-title').textContent + '. ' + $('verdict-detail').textContent);
-  L.push('Rolled: ' + fmt(a.down) + ' notches down and ' + fmt(a.up) + ' up, in ' + fmt(a.N) + ' events' +
-    (a.strokeCount >= 3 ? '. Typical stroke: ' + trim(a.sN) + ' notches in ' + Math.round(a.sDur) + ' ms, ' + Math.round(a.sPause) + ' ms between strokes' : ''));
+  L.push('Rolled: ' + fmt(a.down) + ' notches down and ' + fmt(a.up) + ' up, in ' + fmt(a.N) + ' events');
   const unit = a.N ? UNIT[S.ev[a.N - 1].mode] || 'px' : 'px';
   L.push('Notch size: ' + (!a.N ? 'not seen yet' : S.hires ? '1/' + S.perNotch + ' notch per event (high-resolution wheel)'
     : S.stepped ? trim(S.step) + ' ' + unit + ' per notch' : 'varies, ' + trim(a.lo) + ' to ' + trim(a.hi) + ' ' + unit) + '. Peak speed: ' + Math.round(a.peak) + ' notches a second');
-  L.push('Certain faults: ' + f[MID] + ' reversed mid-roll, ' + f[END] + ' bounce-backs as a stroke ended, ' + f[START] + ' false starts, ' + f[GHOST] + ' with hands off');
-  L.push('Suspect: ' + plural(f[BACK], 'back-step', 'back-steps') + ' between strokes, ' + plural(a.clickMoved, 'event', 'events') + ' as the wheel was clicked');
+  L.push('Certain faults: ' + f[MID] + ' reversed mid-roll, ' + f[END] + ' bounce-backs on stopping, ' + f[START] + ' false starts, ' + f[GHOST] + ' with hands off');
+  L.push('Suspect: ' + plural(f[BACK], 'back-step', 'back-steps') + ' between rolls, ' + plural(a.clickMoved, 'event', 'events') + ' as the wheel was clicked');
   if (S.zero) L.push('Empty events: ' + S.zero + ' with no movement in them, which can be a notch and its opposite added together by the browser');
-  L.push('Coverage, notches tested at each speed (faults in brackets):');
+  L.push('Roll tests, notches rolled in each (faults in brackets):');
   for (let dir = 0; dir < 2; dir++) {
     L.push('  ' + (dir ? 'Up:   ' : 'Down: ') + a.cells[dir].map((c, b) => BAND[b].toLowerCase() + ' ' + c.n + (c.bad ? ' (' + c.bad + ')' : '')).join(', '));
   }
@@ -1298,7 +1279,7 @@ function setPaused(p) {
 
 // Clears the recording. The measured notches per turn is kept: it belongs to the wheel, not the run.
 function reset() {
-  S.ev = []; S.hist = new Map(); S.strokes = []; S.blip = null;
+  S.ev = []; S.hist = new Map(); S.rolls = []; S.blip = null;
   S.wdHist = new Map(); S.wdN = 0; S.model = 'delta'; S.hires = false; S.perNotch = 1;
   S.run = { dir: 0, len: 0, streak: 0, start: 0, tA: 0, gapA: Infinity };
   S.step = 0; S.stepped = true; S.sample = false; S.full = false;
@@ -1403,23 +1384,23 @@ document.querySelectorAll('input[name="zoom"]').forEach((r) => {
 });
 
 // ---------- example trace shown until the first real event ----------
-// Rolled the way a person does it: a few notches per finger stroke, a pause while the
-// finger comes back, then the next stroke. One fault of each main kind is planted in it.
+// Rolled the way a person does it: a few notches per roll, a pause while the
+// finger comes back, then the next roll. One fault of each main kind is planted in it.
 function loadSample() {
   let t = 1000, seed = 11;
   const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
   const roll = (dy, dt) => { t += dt; ingest(dy, 0, t); };
-  const stroke = (dy, n, pause) => { for (let i = 0; i < n; i++) roll(dy, i ? 26 + rnd() * 10 : pause); };
-  stroke(100, 5, 0);
-  stroke(100, 4, 240);
-  stroke(100, 3, 250); roll(-100, 5); stroke(100, 3, 26);    // reversed in the middle of a stroke
-  stroke(100, 6, 235); roll(-100, 12);                         // bounce-back as the stroke ends
-  stroke(100, 4, 270);
+  const rollMany = (dy, n, pause) => { for (let i = 0; i < n; i++) roll(dy, i ? 26 + rnd() * 10 : pause); };
+  rollMany(100, 5, 0);
+  rollMany(100, 4, 240);
+  rollMany(100, 3, 250); roll(-100, 5); rollMany(100, 3, 26);    // reversed in the middle of a roll
+  rollMany(100, 6, 235); roll(-100, 12);                         // bounce-back as the roll ends
+  rollMany(100, 4, 270);
   t += 1300;
-  stroke(-100, 5, 0);
-  stroke(-100, 4, 225);
-  roll(100, 130); stroke(-100, 5, 160);                        // back-step while the finger returns
-  stroke(-100, 6, 245);
+  rollMany(-100, 5, 0);
+  rollMany(-100, 4, 225);
+  roll(100, 130); rollMany(-100, 5, 160);                        // back-step while the finger returns
+  rollMany(-100, 6, 245);
   t += 900;
   for (let i = 0; i < 3; i++) roll(100, i ? 380 + rnd() * 80 : 0);   // single notches
   closeRun();
